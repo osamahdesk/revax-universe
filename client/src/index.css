@@ -442,3 +442,17 @@
 @keyframes legal-modal-enter { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 640px) { .legal-modal__copy { grid-template-columns: 1fr; } .legal-modal__mark { margin-top: 1.5rem; } }
 @media (prefers-reduced-motion: reduce) { .telemetry-sparkline polyline, .telemetry-bars i, .legal-modal__backdrop, .legal-modal { animation: none; } }
+
+
+/* Network quality palette: the same live state colors the trends, status dot, and label. */
+.telemetry-sparkline--green polyline { stroke: #8df4d0; filter: drop-shadow(0 0 4px rgba(141,244,208,.78)); }
+.telemetry-sparkline--amber polyline { stroke: #f4c96d; filter: drop-shadow(0 0 4px rgba(244,201,109,.7)); }
+.telemetry-sparkline--red polyline { stroke: #ff8298; filter: drop-shadow(0 0 4px rgba(255,130,152,.7)); }
+.telemetry-quality { display: grid; grid-template-columns: 8px 1fr; column-gap: 8px; align-items: center; margin-top: 15px; padding: 10px 11px; border: 1px solid rgba(168,232,255,.14); border-radius: 10px; background: rgba(255,255,255,.025); }
+.telemetry-quality__dot { grid-row: span 2; width: 7px; height: 7px; border-radius: 50%; background: #f4c96d; box-shadow: 0 0 12px #f4c96d; }
+.telemetry-quality strong { color: #f4c96d; font-size: 10px; font-weight: 500; letter-spacing: .06em; }
+.telemetry-quality small { margin-top: 3px; color: rgba(235,250,255,.42); font-size: 7px; letter-spacing: .08em; }
+.telemetry-quality--excellent { border-color: rgba(141,244,208,.25); background: rgba(141,244,208,.045); }.telemetry-quality--excellent .telemetry-quality__dot { background: #8df4d0; box-shadow: 0 0 12px #8df4d0; }.telemetry-quality--excellent strong { color: #8df4d0; }
+.telemetry-quality--fair { border-color: rgba(244,201,109,.25); background: rgba(244,201,109,.04); }
+.telemetry-quality--weak { border-color: rgba(255,130,152,.27); background: rgba(255,130,152,.045); }.telemetry-quality--weak .telemetry-quality__dot { background: #ff8298; box-shadow: 0 0 12px #ff8298; }.telemetry-quality--weak strong { color: #ff8298; }
+.telemetry-panel--weak .telemetry-panel__grid div { background: rgba(40,7,18,.38); }.telemetry-panel--excellent .telemetry-panel__grid div { background: rgba(5,31,28,.36); }

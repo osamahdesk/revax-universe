@@ -11,6 +11,8 @@ import {
   Youtube,
 } from "lucide-react";
 
+type NetworkQuality = "excellent" | "fair" | "weak" | "unknown";
+
 const socialLinks = [
   { label: "Instagram @0r.ei", icon: Instagram, href: "https://www.instagram.com/0r.ei/" },
 ];
@@ -277,7 +279,7 @@ function RevaxMark({ className = "" }: { className?: string }) {
   return <span className={`revax-mark ${className}`} aria-hidden="true"><span className="revax-mark__core" /><span className="revax-mark__orbit revax-mark__orbit--one" /><span className="revax-mark__orbit revax-mark__orbit--two" /></span>;
 }
 
-function Sparkline({ values, tone = "cyan" }: { values: number[]; tone?: "cyan" | "violet" | "white" }) {
+function Sparkline({ values, tone = "cyan" }: { values: number[]; tone?: "cyan" | "violet" | "white" | "green" | "amber" | "red" }) {
   const width = 104;
   const height = 26;
   const max = Math.max(...values, 1);
@@ -300,7 +302,7 @@ export default function Home() {
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
   const [motionEnabled, setMotionEnabled] = useState(true);
-  const [telemetry, setTelemetry] = useState({ buffered: 0, speed: "—", ready: "0/4", edge: "CONNECTING", link: "—", latency: "—" });
+  const [telemetry, setTelemetry] = useState({ buffered: 0, speed: "—", speedValue: 0, ready: "0/4", edge: "CONNECTING", link: "—", latency: "—", quality: "unknown" as NetworkQuality });
   const [telemetryOpen, setTelemetryOpen] = useState(false);
   const [legalOpen, setLegalOpen] = useState(false);
   const [telemetryHistory, setTelemetryHistory] = useState({ buffer: [] as number[], speed: [] as number[], latency: [] as number[] });
@@ -320,7 +322,8 @@ export default function Home() {
       const speedValue = resource?.decodedBodySize && resource.duration > 0 ? resource.decodedBodySize * 8 / resource.duration / 1000 : connection?.downlink ?? 0;
       const latencyValue = resource?.responseStart ? Math.round(resource.responseStart) : 0;
       const speed = speedValue ? `${speedValue.toFixed(1)} Mbps` : "—";
-      setTelemetry({ buffered, speed, ready: `${video.readyState}/4`, edge: videoState === "error" ? "OFFLINE" : videoState === "ready" ? "ONLINE" : "CONNECTING", link: connection?.effectiveType?.toUpperCase() ?? "—", latency: latencyValue ? `${latencyValue} ms` : "—" });
+      const quality: NetworkQuality = !navigator.onLine || videoState === "error" ? "weak" : speedValue >= 5 && video.readyState >= 3 ? "excellent" : speedValue >= 1 ? "fair" : "unknown";
+      setTelemetry({ buffered, speed, speedValue, ready: `${video.readyState}/4`, edge: videoState === "error" ? "OFFLINE" : videoState === "ready" ? "ONLINE" : "CONNECTING", link: connection?.effectiveType?.toUpperCase() ?? "—", latency: latencyValue ? `${latencyValue} ms` : "—", quality });
       setTelemetryHistory((previous) => ({ buffer: [...previous.buffer, buffered].slice(-24), speed: [...previous.speed, speedValue].slice(-24), latency: [...previous.latency, latencyValue].slice(-24) }));
       timer = window.setTimeout(measure, 700);
     };
@@ -359,7 +362,7 @@ export default function Home() {
       <ScrollCue />
       <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button>
       <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
-      {telemetryOpen && <aside className="telemetry-panel liquid-glass" aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong><Sparkline values={telemetryHistory.buffer} tone="cyan" /></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong><span className="telemetry-meter"><span style={{ width: `${(Number(telemetry.ready.split("/")[0]) / 4) * 100}%` }} /></span></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong><Sparkline values={telemetryHistory.speed} tone="violet" /></div><div><small>NETWORK</small><strong>{telemetry.link}</strong><span className="telemetry-bars"><i /><i /><i /><i /><i /></span></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong><Sparkline values={telemetryHistory.latency} tone="white" /></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong><span className={`telemetry-live-dot ${telemetry.edge === "ONLINE" ? "is-online" : ""}`} /></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
+      {telemetryOpen && <aside className={`telemetry-panel telemetry-panel--${telemetry.quality} liquid-glass`} aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className={`telemetry-quality telemetry-quality--${telemetry.quality}`}><span className="telemetry-quality__dot" /><strong>{telemetry.quality === "excellent" ? "Excellent connection" : telemetry.quality === "fair" ? "Stable connection" : telemetry.quality === "weak" ? "Weak connection" : "Measuring connection"}</strong><small>{telemetry.quality === "excellent" ? "High bandwidth / ready for 4K" : telemetry.quality === "fair" ? "Moderate bandwidth / adaptive" : telemetry.quality === "weak" ? "Low bandwidth / conserve motion" : "Waiting for live samples"}</small></div><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong><Sparkline values={telemetryHistory.buffer} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "cyan"} /></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong><span className="telemetry-meter"><span style={{ width: `${(Number(telemetry.ready.split("/")[0]) / 4) * 100}%` }} /></span></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong><Sparkline values={telemetryHistory.speed} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "violet"} /></div><div><small>NETWORK</small><strong>{telemetry.link}</strong><span className="telemetry-bars"><i /><i /><i /><i /><i /></span></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong><Sparkline values={telemetryHistory.latency} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "white"} /></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong><span className={`telemetry-live-dot ${telemetry.edge === "ONLINE" ? "is-online" : ""}`} /></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
