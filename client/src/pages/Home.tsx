@@ -277,6 +277,10 @@ function ScrollCue() {
   );
 }
 
+function RevaxMark({ className = "" }: { className?: string }) {
+  return <span className={`revax-mark ${className}`} aria-hidden="true"><span className="revax-mark__core" /><span className="revax-mark__orbit revax-mark__orbit--one" /><span className="revax-mark__orbit revax-mark__orbit--two" /></span>;
+}
+
 function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -290,10 +294,27 @@ export default function Home() {
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
   const [motionEnabled, setMotionEnabled] = useState(true);
+  const [telemetry, setTelemetry] = useState({ buffered: 0, speed: "—", ready: "0/4", edge: "CONNECTING", link: "—", latency: "—" });
   const videoInitialized = useRef(false);
   const isReady = videoState === "ready";
   const loaderPercent = Math.max(8, loadProgress);
   const loaderStage = videoState === "error" ? "SIGNAL RETRY" : loaderPercent < 34 ? "CALIBRATING LENS" : loaderPercent < 78 ? "LOCKING SATELLITE" : "SIGNAL READY";
+
+  useEffect(() => {
+    let timer = 0;
+    const measure = () => {
+      const video = videoRef.current;
+      if (!video) return;
+      const buffered = video.buffered.length && Number.isFinite(video.duration) && video.duration > 0 ? Math.round((video.buffered.end(video.buffered.length - 1) / video.duration) * 100) : 0;
+      const resource = performance.getEntriesByName(video.currentSrc).find((entry) => entry instanceof PerformanceResourceTiming) as PerformanceResourceTiming | undefined;
+      const connection = (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number } }).connection;
+      const speed = resource?.decodedBodySize && resource.duration > 0 ? `${(resource.decodedBodySize * 8 / resource.duration / 1000).toFixed(1)} Mbps` : connection?.downlink ? `${connection.downlink.toFixed(1)} Mbps` : "—";
+      setTelemetry({ buffered, speed, ready: `${video.readyState}/4`, edge: videoState === "error" ? "OFFLINE" : videoState === "ready" ? "ONLINE" : "CONNECTING", link: connection?.effectiveType?.toUpperCase() ?? "—", latency: resource?.responseStart ? `${Math.round(resource.responseStart)} ms` : "—" });
+      timer = window.setTimeout(measure, 700);
+    };
+    measure();
+    return () => window.clearTimeout(timer);
+  }, [videoState]);
 
   const handleVideoProgress = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = event.currentTarget;
@@ -346,10 +367,10 @@ export default function Home() {
         <div className="satellite-loader__orbit satellite-loader__orbit--three" />
         <div className="satellite-loader__crosshair" aria-hidden="true"><i /><i /><i /><i /><span /></div>
         <div className="satellite-loader__signal"><span /><span /><span /><span /><span /></div>
-        <div className="satellite-loader__telemetry satellite-loader__telemetry--left" aria-hidden="true"><span>LAT 37.7749° N</span><span>LON 122.4194° W</span><span>ALT 408 KM</span></div>
-        <div className="satellite-loader__telemetry satellite-loader__telemetry--right" aria-hidden="true"><span>UPLINK / 05</span><span>PACKET / {String(Math.max(1, Math.round(loaderPercent / 10))).padStart(2, "0")}</span><span>ENCRYPT / LUMINA</span></div>
+        <div className="satellite-loader__telemetry satellite-loader__telemetry--left" aria-hidden="true"><span>BUFFER / {telemetry.buffered}%</span><span>READY STATE / {telemetry.ready}</span><span>DOWNLOAD / {telemetry.speed}</span></div>
+        <div className="satellite-loader__telemetry satellite-loader__telemetry--right" aria-hidden="true"><span>EDGE LINK / {telemetry.edge}</span><span>NETWORK / {telemetry.link}</span><span>RESPONSE / {telemetry.latency}</span></div>
         <div className="satellite-loader__content">
-          <div className="satellite-loader__brand"><span className="satellite-loader__brand-mark">✦</span><span>LUMINA</span><b>ORBITAL NETWORK</b></div>
+          <div className="satellite-loader__brand"><RevaxMark /><span>REVAX</span><b>UNIVERSE / ORBITAL NETWORK</b></div>
           <p className="satellite-loader__eyebrow">MISSION 05 / ATMOSPHERIC LINK</p>
           <h2>سيتم ربطك بالقمر الصناعي</h2>
           <p className="satellite-loader__status"><span>{loaderStage}</span><em>{videoState === "error" ? "إعادة محاولة استقبال الإشارة…" : "جاري تهيئة نافذة الرصد"}</em></p>
@@ -367,9 +388,9 @@ export default function Home() {
           <a href="#top" className="group flex items-center gap-3 rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80" aria-label="Lumina home">
             <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-[#a8e8ff]/30 bg-black/20 text-white backdrop-blur-md transition-transform duration-200 ease-out group-hover:scale-105">
               <img src="/manus-storage/lumina-mark_457b65a3.png" className="absolute inset-0 h-full w-full scale-125 object-contain opacity-20" alt="" />
-              <LuminaSvgMark className="relative h-5 w-5 drop-shadow-[0_0_8px_rgba(168,232,255,0.9)]" />
+              <RevaxMark />
             </span>
-            <span className="text-sm font-medium tracking-[0.30em]">LUMINA</span>
+            <span className="text-sm font-medium tracking-[0.30em]">REVAX <span className="text-white/45">UNIVERSE</span></span>
           </a>
           <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-white/60">
             <span className="h-1.5 w-1.5 rounded-full bg-[#a8e8ff] shadow-[0_0_16px_#a8e8ff]" />
@@ -430,11 +451,11 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 mb-10">
               <div className="md:col-span-5">
                 <div className="flex items-center gap-3 text-white">
-                  <LuminaSvgMark className="h-6 w-6" />
-                  <span className="text-xl font-medium tracking-[-0.02em]">LUMINA</span>
+                  <RevaxMark />
+                  <span className="text-xl font-medium tracking-[-0.02em]">REVAX <span className="text-white/45">UNIVERSE</span></span>
                 </div>
                 <p className="mt-5 max-w-sm text-sm leading-relaxed">
-                  Lumina provides premium clarity on global events and cosmic wonders - shared with all for free.
+                  REVAX UNIVERSE provides premium clarity on global events and cosmic wonders — shared with all for free.
                 </p>
               </div>
 
