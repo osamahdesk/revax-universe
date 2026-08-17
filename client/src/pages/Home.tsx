@@ -12,11 +12,7 @@ import {
 } from "lucide-react";
 
 const socialLinks = [
-  { label: "Music", icon: Music2, href: "https://www.tiktok.com/" },
-  { label: "Facebook", icon: Facebook, href: "https://www.facebook.com/" },
-  { label: "Twitter", icon: Twitter, href: "https://x.com/" },
-  { label: "YouTube", icon: Youtube, href: "https://www.youtube.com/" },
-  { label: "Instagram", icon: Instagram, href: "https://www.instagram.com/" },
+  { label: "Instagram @0r.ei", icon: Instagram, href: "https://www.instagram.com/0r.ei/" },
 ];
 
 const footerColumns = [
@@ -295,6 +291,7 @@ export default function Home() {
   const [loadProgress, setLoadProgress] = useState(0);
   const [motionEnabled, setMotionEnabled] = useState(true);
   const [telemetry, setTelemetry] = useState({ buffered: 0, speed: "—", ready: "0/4", edge: "CONNECTING", link: "—", latency: "—" });
+  const [telemetryOpen, setTelemetryOpen] = useState(false);
   const videoInitialized = useRef(false);
   const isReady = videoState === "ready";
   const loaderPercent = Math.max(8, loadProgress);
@@ -339,6 +336,8 @@ export default function Home() {
       <ContextCursor />
       <ScrollCue />
       <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button>
+      <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
+      {telemetryOpen && <aside className="telemetry-panel liquid-glass" aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong></div><div><small>NETWORK</small><strong>{telemetry.link}</strong></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
@@ -466,7 +465,7 @@ export default function Home() {
                     <ul className="text-xs space-y-2">
                       {column.links.map((link) => (
                         <li key={link}>
-                          <a href="#top" className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white/80">{link}</a>
+                          <span className="text-white/45">{link}</span>
                         </li>
                       ))}
                     </ul>
@@ -476,9 +475,9 @@ export default function Home() {
             </div>
 
             <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
-              <p className="text-[10px] uppercase tracking-widest opacity-50">Curated by @GotInGeorgiG</p>
+              <p className="text-[10px] uppercase tracking-widest opacity-50">© Revax — All rights reserved.</p>
               <div className="flex flex-wrap items-center justify-center gap-4">
-                <span className="text-[10px] uppercase tracking-widest opacity-50">Join the Journey:</span>
+                <span className="text-[10px] uppercase tracking-widest opacity-50">Follow Revax:</span>
                 <div className="flex items-center gap-3">
                   {socialLinks.map(({ label, icon: Icon, href }) => (
                     <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} className="opacity-70 hover:opacity-100 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white">
