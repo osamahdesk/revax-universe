@@ -44,6 +44,7 @@ const observationScenes = [
   { index: "01", kicker: "ORBITAL STUDY / 01", title: "Watch what gathers beyond the horizon.", body: "A slow field guide to the forces that shape our shared sky. Scroll to move through the signal.", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", note: "PERIGEE / 42.8°" },
   { index: "02", kicker: "ATMOSPHERIC STUDY / 02", title: "The atmosphere keeps its own time.", body: "Trace the quiet movement of weather, light, and pressure as one continuous observation.", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "AURORA / ACTIVE" },
   { index: "03", kicker: "DEEP FIELD / 03", title: "Clarity begins where the familiar ends.", body: "One final turn of the lens. Leave with a wider frame for the things still becoming visible.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "ECLIPSE / 03:17" },
+  { index: "04", kicker: "ECLIPSE THRESHOLD / 04", title: "The dark edge makes the signal visible.", body: "Orbit resolves into eclipse: a measured crossing where shadow becomes another kind of light.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "UMBRA / 04:12" },
 ];
 
 function sceneImageOpacity(index: number, progress: number) {
@@ -105,7 +106,8 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
           {observationScenes.map((item, index) => <img key={item.index} src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center transition-[opacity,transform] duration-500 ease-out" style={{ opacity: sceneImageOpacity(index, progress), transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} />)}
           <div className="absolute inset-0 bg-gradient-to-r from-[#050912]/95 via-[#050912]/45 to-transparent" aria-hidden="true" />
           <div className="motion-scanline pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[#a8e8ff]/30" style={{ transform: `translateY(${(progress - 0.5) * 220}px)` }} aria-hidden="true" />
-          <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)` }} aria-hidden="true" />
+          <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)`, opacity: activeScene === 3 ? 0.55 + Math.max(0, (progress - 0.7) / 0.3) * 0.3 : 0.55 }} aria-hidden="true" />
+          <div className="eclipse-veil pointer-events-none absolute inset-0" style={{ opacity: activeScene === 3 ? Math.max(0, (progress - 0.68) / 0.32) : 0, transform: `scale(${1 + Math.max(0, progress - 0.68) * 0.12})` }} aria-hidden="true" />
 
           <div className="relative z-10 grid w-full grid-cols-1 gap-12 md:grid-cols-[minmax(0,1fr)_16rem] md:items-end">
             <motion.div key={scene.index} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0, x: (progress - activeScene / observationScenes.length) * -22 }} transition={{ duration: 0.48, ease: [0.23, 1, 0.32, 1] }} className="max-w-xl">
@@ -115,11 +117,42 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
               <div className="mt-8 flex items-center gap-4 text-[10px] uppercase tracking-[0.18em] text-white/45"><span className="text-[#a8e8ff]">{scene.note}</span><span className="h-px w-12 bg-white/20" /><span>Scroll / scrub</span></div>
             </motion.div>
 
-            <div className="flex items-end justify-between gap-6 md:block"><div className="mb-5 text-right text-[10px] uppercase tracking-[0.22em] text-white/40 md:text-left">Sequence / 03</div><div className="flex items-center gap-3 md:block"><div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/15 md:h-32 md:w-px md:rounded-none"><div className="absolute left-0 top-0 h-full bg-[#a8e8ff] transition-[width] duration-150 md:bottom-0 md:left-0 md:top-auto md:h-auto md:w-full md:transition-[height]" style={{ width: `${progress * 100}%`, height: undefined }} /></div><div className="text-3xl font-light tracking-[-0.06em] text-white/85">{scene.index}<span className="text-sm text-white/30"> / 03</span></div></div></div>
+            <div className="flex items-end justify-between gap-6 md:block"><div className="mb-5 text-right text-[10px] uppercase tracking-[0.22em] text-white/40 md:text-left">Sequence / 04</div><div className="flex items-center gap-3 md:block"><div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/15 md:h-32 md:w-px md:rounded-none"><div className="absolute left-0 top-0 h-full bg-[#a8e8ff] transition-[width] duration-150 md:bottom-0 md:left-0 md:top-auto md:h-auto md:w-full md:transition-[height]" style={{ width: `${progress * 100}%`, height: undefined }} /></div><div className="text-3xl font-light tracking-[-0.06em] text-white/85">{scene.index}<span className="text-sm text-white/30"> / 04</span></div></div></div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function ContextCursor() {
+  const [position, setPosition] = useState({ x: -80, y: -80 });
+  const [mode, setMode] = useState<"scroll" | "explore" | "play">("scroll");
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const onMove = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const context = target.closest<HTMLElement>("[data-cursor]")?.dataset.cursor;
+      setMode(context === "play" || context === "explore" ? context : "scroll");
+      setPosition({ x: event.clientX, y: event.clientY });
+      setVisible(true);
+    };
+    const onLeave = () => setVisible(false);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    document.documentElement.addEventListener("mouseleave", onLeave);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      document.documentElement.removeEventListener("mouseleave", onLeave);
+    };
+  }, []);
+
+  const label = mode === "play" ? "Play" : mode === "explore" ? "Explore" : "Scroll";
+  return (
+    <div className={`context-cursor ${visible ? "is-visible" : ""} context-cursor--${mode}`} style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }} aria-hidden="true">
+      <span className="context-cursor__core" />
+      <span className="context-cursor__label">{label}</span>
+    </div>
   );
 }
 
@@ -136,6 +169,7 @@ export default function Home() {
 
   return (
     <main className="relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white">
+      <ContextCursor />
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
@@ -145,6 +179,7 @@ export default function Home() {
         playsInline
         aria-hidden="true"
       >
+        <source src="/manus-storage/lumina-scroll-sequence_860ace3b.webm" type="video/webm" />
         <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" type="video/mp4" />
       </video>
       <div className="fixed inset-0 z-[1] bg-[linear-gradient(180deg,rgba(3,8,18,0.38)_0%,rgba(3,8,18,0.15)_44%,rgba(3,8,18,0.78)_100%)]" aria-hidden="true" />
@@ -188,7 +223,7 @@ export default function Home() {
               <a href="#scroll-story" className="group inline-flex items-center gap-3 rounded-full bg-[#a8e8ff] px-5 py-3 text-xs font-medium text-slate-950 shadow-[0_0_30px_rgba(168,232,255,0.24)] transition duration-200 ease-out hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 Enter the observatory <ArrowUpRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </a>
-              <a href="#scroll-story" className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-xs text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <a href="#scroll-story" data-cursor="play" onClick={() => videoRef.current?.play().catch(() => undefined)} className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-xs text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 <span className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-white/10"><Play size={11} fill="currentColor" /></span>
                 Watch the signal
               </a>
@@ -203,7 +238,7 @@ export default function Home() {
             className="mt-12 flex gap-3 overflow-x-auto pb-2 sm:mt-16 md:max-w-3xl"
           >
             {highlights.map((item, index) => (
-              <a key={item.title} href="#lumina-footer" className="liquid-glass group relative h-24 min-w-44 overflow-hidden rounded-2xl border border-[#a8e8ff]/20 bg-white/5 sm:h-28 sm:min-w-52 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <a key={item.title} href="#lumina-footer" data-cursor="explore" className="liquid-glass group relative h-24 min-w-44 overflow-hidden rounded-2xl border border-[#a8e8ff]/20 bg-white/5 sm:h-28 sm:min-w-52 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 <img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105 group-hover:opacity-85" />
                 <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                 <span className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 text-xs text-white">

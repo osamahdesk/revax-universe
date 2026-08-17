@@ -144,6 +144,52 @@
   transform-style: preserve-3d;
 }
 
+/* Context cursor: visible only on pointer devices, with a quieter fallback on touch. */
+.context-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  display: none;
+  width: 78px;
+  height: 78px;
+  margin-left: -39px;
+  margin-top: -39px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 232, 255, 0.38);
+  border-radius: 999px;
+  color: #dff8ff;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 180ms ease, width 220ms cubic-bezier(0.23, 1, 0.32, 1), height 220ms cubic-bezier(0.23, 1, 0.32, 1), margin 220ms cubic-bezier(0.23, 1, 0.32, 1), background-color 220ms ease;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+}
+.context-cursor.is-visible { opacity: 1; }
+.context-cursor__core { width: 6px; height: 6px; border-radius: 999px; background: #a8e8ff; box-shadow: 0 0 18px rgba(168,232,255,0.9); transition: transform 220ms ease; }
+.context-cursor__label { position: absolute; transform: translateY(27px); font-size: 7px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; }
+.context-cursor--explore { width: 96px; height: 96px; margin-left: -48px; margin-top: -48px; background: rgba(168,232,255,0.07); }
+.context-cursor--explore .context-cursor__core { transform: scale(1.5); }
+.context-cursor--play { width: 66px; height: 66px; margin-left: -33px; margin-top: -33px; background: rgba(168,232,255,0.16); }
+.context-cursor--play .context-cursor__core { width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 8px solid #dff8ff; border-radius: 0; background: transparent; box-shadow: none; transform: translateX(2px); }
+
+.eclipse-veil {
+  background: radial-gradient(circle at 76% 50%, rgba(168,232,255,0.2) 0 2%, rgba(84,150,220,0.08) 11%, transparent 28%), linear-gradient(115deg, transparent 35%, rgba(168,232,255,0.08) 49%, transparent 63%);
+  mix-blend-mode: screen;
+  filter: blur(0.4px);
+  will-change: opacity, transform;
+}
+
+@media (pointer: fine) {
+  .context-cursor { display: flex; }
+  body, a, button { cursor: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .context-cursor { transition: none; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .orbital-line { animation: orbital-drift 12s ease-in-out infinite alternate; }
 }
