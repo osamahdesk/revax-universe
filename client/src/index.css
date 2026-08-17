@@ -407,3 +407,38 @@
 @keyframes telemetry-enter { from { opacity: 0; transform: translateY(-8px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 700px) { .telemetry-trigger { top: auto; right: 1rem; bottom: 4rem; } .telemetry-panel { top: auto; right: 1rem; bottom: 7.3rem; } }
 @media (prefers-reduced-motion: reduce) { .telemetry-trigger__pulse { animation: none; } .telemetry-panel { animation: none; } }
+
+
+/* Live telemetry visual language: real samples become calm, readable motion. */
+.telemetry-sparkline { display: block; width: 100%; height: 26px; margin-top: 7px; overflow: visible; }
+.telemetry-sparkline polyline { stroke: #a8e8ff; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px rgba(168,232,255,.7)); animation: sparkline-draw 720ms cubic-bezier(.23,1,.32,1) both; }
+.telemetry-sparkline--violet polyline { stroke: #bba7ff; filter: drop-shadow(0 0 3px rgba(187,167,255,.6)); }
+.telemetry-sparkline--white polyline { stroke: #effcff; filter: drop-shadow(0 0 3px rgba(239,252,255,.55)); }
+.telemetry-meter { display: block; height: 3px; margin-top: 10px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.12); }
+.telemetry-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #54bfe9, #e5fbff); box-shadow: 0 0 10px rgba(168,232,255,.8); transition: width 450ms cubic-bezier(.23,1,.32,1); }
+.telemetry-bars { display: flex; align-items: end; gap: 3px; height: 26px; margin-top: 7px; }
+.telemetry-bars i { display: block; width: 5px; height: 8px; border-radius: 2px; background: rgba(168,232,255,.42); animation: telemetry-bar 1.4s ease-in-out infinite alternate; }
+.telemetry-bars i:nth-child(2) { height: 14px; animation-delay: 100ms; }.telemetry-bars i:nth-child(3) { height: 20px; animation-delay: 180ms; }.telemetry-bars i:nth-child(4) { height: 12px; animation-delay: 260ms; }.telemetry-bars i:nth-child(5) { height: 24px; animation-delay: 340ms; }
+.telemetry-live-dot { display: block; width: 8px; height: 8px; margin-top: 10px; border-radius: 50%; background: #f4c96d; box-shadow: 0 0 12px #f4c96d; transition: background .3s ease, box-shadow .3s ease; }
+.telemetry-live-dot.is-online { background: #8df4d0; box-shadow: 0 0 12px #8df4d0; }
+.rights-trigger { padding: 0; color: rgba(235,250,255,.48); font-size: 10px; letter-spacing: .17em; text-transform: uppercase; background: transparent; border: 0; transition: color .2s ease; }
+.rights-trigger:hover, .rights-trigger:focus-visible { color: #dff8ff; }
+.legal-modal__backdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 1.25rem; background: rgba(1,5,12,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); animation: legal-fade-in 220ms ease both; }
+.legal-modal { width: min(720px, 100%); max-height: min(82vh, 700px); overflow: auto; padding: clamp(1.35rem, 3.5vw, 2.6rem); color: rgba(235,250,255,.78); background: linear-gradient(145deg, rgba(12,31,53,.72), rgba(2,8,18,.84)); border-color: rgba(168,232,255,.28); box-shadow: 0 30px 100px rgba(0,0,0,.48), 0 0 70px rgba(69,171,235,.14); animation: legal-modal-enter 380ms cubic-bezier(.23,1,.32,1) both; }
+.legal-modal__topline, .legal-modal__footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; color: rgba(168,232,255,.62); font-size: 8px; letter-spacing: .19em; text-transform: uppercase; }
+.legal-modal__topline button { display: grid; width: 30px; height: 30px; place-items: center; color: rgba(235,250,255,.78); font-size: 20px; line-height: 1; background: rgba(255,255,255,.04); border: 1px solid rgba(168,232,255,.2); border-radius: 50%; }
+.legal-modal__mark { display: grid; width: 54px; height: 54px; margin-top: 2.5rem; place-items: center; border: 1px solid rgba(168,232,255,.3); border-radius: 18px; background: rgba(168,232,255,.05); box-shadow: 0 0 34px rgba(69,171,235,.13); }
+.legal-modal__mark .revax-mark { width: 38px; height: 38px; }
+.legal-modal h2 { margin-top: 1.1rem; color: #effcff; font-family: "Orbitron", "Space Grotesk", sans-serif; font-size: clamp(1.8rem, 5vw, 3rem); font-weight: 400; letter-spacing: -.06em; }
+.legal-modal__intro { max-width: 430px; margin-top: .8rem; color: rgba(235,250,255,.52); font-size: .9rem; line-height: 1.6; }
+.legal-modal__copy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 2rem; }
+.legal-modal__copy article { padding: 1.1rem; border: 1px solid rgba(168,232,255,.12); border-radius: 16px; background: rgba(255,255,255,.025); }
+.legal-modal__copy h3 { color: #a8e8ff; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; }
+.legal-modal__copy p { margin-top: .75rem; color: rgba(235,250,255,.58); font-size: .78rem; line-height: 1.7; }
+.legal-modal__footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,.1); }
+@keyframes sparkline-draw { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes telemetry-bar { from { opacity: .35; transform: scaleY(.7); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes legal-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes legal-modal-enter { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 640px) { .legal-modal__copy { grid-template-columns: 1fr; } .legal-modal__mark { margin-top: 1.5rem; } }
+@media (prefers-reduced-motion: reduce) { .telemetry-sparkline polyline, .telemetry-bars i, .legal-modal__backdrop, .legal-modal { animation: none; } }

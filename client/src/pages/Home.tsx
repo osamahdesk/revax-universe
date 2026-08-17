@@ -277,6 +277,16 @@ function RevaxMark({ className = "" }: { className?: string }) {
   return <span className={`revax-mark ${className}`} aria-hidden="true"><span className="revax-mark__core" /><span className="revax-mark__orbit revax-mark__orbit--one" /><span className="revax-mark__orbit revax-mark__orbit--two" /></span>;
 }
 
+function Sparkline({ values, tone = "cyan" }: { values: number[]; tone?: "cyan" | "violet" | "white" }) {
+  const width = 104;
+  const height = 26;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = Math.max(max - min, 1);
+  const points = values.length < 2 ? `${width / 2},${height / 2}` : values.map((value, index) => `${(index / (values.length - 1)) * width},${height - ((value - min) / range) * (height - 4) - 2}`).join(" ");
+  return <svg className={`telemetry-sparkline telemetry-sparkline--${tone}`} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Live metric trend"><polyline points={points} fill="none" vectorEffect="non-scaling-stroke" /></svg>;
+}
+
 function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -292,6 +302,8 @@ export default function Home() {
   const [motionEnabled, setMotionEnabled] = useState(true);
   const [telemetry, setTelemetry] = useState({ buffered: 0, speed: "—", ready: "0/4", edge: "CONNECTING", link: "—", latency: "—" });
   const [telemetryOpen, setTelemetryOpen] = useState(false);
+  const [legalOpen, setLegalOpen] = useState(false);
+  const [telemetryHistory, setTelemetryHistory] = useState({ buffer: [] as number[], speed: [] as number[], latency: [] as number[] });
   const videoInitialized = useRef(false);
   const isReady = videoState === "ready";
   const loaderPercent = Math.max(8, loadProgress);
@@ -305,13 +317,23 @@ export default function Home() {
       const buffered = video.buffered.length && Number.isFinite(video.duration) && video.duration > 0 ? Math.round((video.buffered.end(video.buffered.length - 1) / video.duration) * 100) : 0;
       const resource = performance.getEntriesByName(video.currentSrc).find((entry) => entry instanceof PerformanceResourceTiming) as PerformanceResourceTiming | undefined;
       const connection = (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number } }).connection;
-      const speed = resource?.decodedBodySize && resource.duration > 0 ? `${(resource.decodedBodySize * 8 / resource.duration / 1000).toFixed(1)} Mbps` : connection?.downlink ? `${connection.downlink.toFixed(1)} Mbps` : "—";
-      setTelemetry({ buffered, speed, ready: `${video.readyState}/4`, edge: videoState === "error" ? "OFFLINE" : videoState === "ready" ? "ONLINE" : "CONNECTING", link: connection?.effectiveType?.toUpperCase() ?? "—", latency: resource?.responseStart ? `${Math.round(resource.responseStart)} ms` : "—" });
+      const speedValue = resource?.decodedBodySize && resource.duration > 0 ? resource.decodedBodySize * 8 / resource.duration / 1000 : connection?.downlink ?? 0;
+      const latencyValue = resource?.responseStart ? Math.round(resource.responseStart) : 0;
+      const speed = speedValue ? `${speedValue.toFixed(1)} Mbps` : "—";
+      setTelemetry({ buffered, speed, ready: `${video.readyState}/4`, edge: videoState === "error" ? "OFFLINE" : videoState === "ready" ? "ONLINE" : "CONNECTING", link: connection?.effectiveType?.toUpperCase() ?? "—", latency: latencyValue ? `${latencyValue} ms` : "—" });
+      setTelemetryHistory((previous) => ({ buffer: [...previous.buffer, buffered].slice(-24), speed: [...previous.speed, speedValue].slice(-24), latency: [...previous.latency, latencyValue].slice(-24) }));
       timer = window.setTimeout(measure, 700);
     };
     measure();
     return () => window.clearTimeout(timer);
   }, [videoState]);
+
+  useEffect(() => {
+    if (!legalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setLegalOpen(false); };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [legalOpen]);
 
   const handleVideoProgress = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = event.currentTarget;
@@ -337,7 +359,7 @@ export default function Home() {
       <ScrollCue />
       <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button>
       <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
-      {telemetryOpen && <aside className="telemetry-panel liquid-glass" aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong></div><div><small>NETWORK</small><strong>{telemetry.link}</strong></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
+      {telemetryOpen && <aside className="telemetry-panel liquid-glass" aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong><Sparkline values={telemetryHistory.buffer} tone="cyan" /></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong><span className="telemetry-meter"><span style={{ width: `${(Number(telemetry.ready.split("/")[0]) / 4) * 100}%` }} /></span></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong><Sparkline values={telemetryHistory.speed} tone="violet" /></div><div><small>NETWORK</small><strong>{telemetry.link}</strong><span className="telemetry-bars"><i /><i /><i /><i /><i /></span></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong><Sparkline values={telemetryHistory.latency} tone="white" /></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong><span className={`telemetry-live-dot ${telemetry.edge === "ONLINE" ? "is-online" : ""}`} /></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
@@ -475,7 +497,7 @@ export default function Home() {
             </div>
 
             <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
-              <p className="text-[10px] uppercase tracking-widest opacity-50">© Revax — All rights reserved.</p>
+              <button type="button" className="rights-trigger" onClick={() => setLegalOpen(true)} data-cursor="open">© Revax — All rights reserved.</button>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <span className="text-[10px] uppercase tracking-widest opacity-50">Follow Revax:</span>
                 <div className="flex items-center gap-3">
@@ -490,6 +512,7 @@ export default function Home() {
           </div>
         </motion.footer>
       </div>
+      {legalOpen && <div className="legal-modal__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setLegalOpen(false); }}><section className="legal-modal liquid-glass" role="dialog" aria-modal="true" aria-labelledby="revax-legal-title"><div className="legal-modal__topline"><span>REVAX / LEGAL ARCHIVE</span><button type="button" onClick={() => setLegalOpen(false)} aria-label="Close legal information">×</button></div><div className="legal-modal__mark"><RevaxMark /></div><h2 id="revax-legal-title">Revax Universe</h2><p className="legal-modal__intro">A quiet observatory for clarity, exploration, and responsible connection.</p><div className="legal-modal__copy"><article><h3>Privacy Policy</h3><p>Revax only reads the browser and media signals needed to load and scrub this experience, such as video readiness, buffer progress, network type, and measured resource timing. These readings remain in the browser and are not used to identify you.</p></article><article><h3>Terms of Use</h3><p>Use Revax Universe for personal, lawful exploration. Visuals, motion systems, copy, and the REVAX mark are owned by Revax and may not be copied, redistributed, or presented as another service without permission.</p></article></div><div className="legal-modal__footer"><span>© Revax / All rights reserved</span><span>ESC TO CLOSE</span></div></section></div>}
     </main>
   );
 }
