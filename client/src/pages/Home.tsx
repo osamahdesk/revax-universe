@@ -68,10 +68,9 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
     let lastTime = performance.now();
 
     const readTarget = () => {
-      const section = sectionRef.current;
-      if (!section) return;
-      const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
-      targetProgress.current = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / scrollable));
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      // Use the whole page as the timeline so the first downward gesture starts frame 0 immediately.
+      targetProgress.current = Math.max(0, Math.min(1, window.scrollY / maxScroll));
     };
 
     const syncVideo = (displayProgress: number) => {
@@ -185,6 +184,29 @@ function ContextCursor() {
   );
 }
 
+function ScrollCue() {
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      setProgress(Math.max(0, Math.min(1, window.scrollY / maxScroll)));
+      frame = 0;
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { if (frame) cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); };
+  }, []);
+  return (
+    <div className="scroll-cue liquid-glass" style={{ opacity: Math.max(0, 1 - progress * 8), transform: `translate3d(0, ${progress * -18}px, 0)` }} aria-hidden="true">
+      <span className="scroll-cue__line" />
+      <span className="scroll-cue__label">Scroll</span>
+      <span className="scroll-cue__arrow">↓</span>
+    </div>
+  );
+}
+
 function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -199,6 +221,7 @@ export default function Home() {
   return (
     <main className="relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white">
       <ContextCursor />
+      <ScrollCue />
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
