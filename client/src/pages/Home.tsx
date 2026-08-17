@@ -45,6 +45,7 @@ const observationScenes = [
   { index: "02", kicker: "ATMOSPHERIC STUDY / 02", title: "The atmosphere keeps its own time.", body: "Trace the quiet movement of weather, light, and pressure as one continuous observation.", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "AURORA / ACTIVE" },
   { index: "03", kicker: "DEEP FIELD / 03", title: "Clarity begins where the familiar ends.", body: "One final turn of the lens. Leave with a wider frame for the things still becoming visible.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", note: "ECLIPSE / 03:17" },
   { index: "04", kicker: "ECLIPSE THRESHOLD / 04", title: "The dark edge makes the signal visible.", body: "Orbit resolves into eclipse: a measured crossing where shadow becomes another kind of light.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "UMBRA / 04:12" },
+  { index: "05", kicker: "SIGNAL CONVERGENCE / 05", title: "Everything visible leaves a trace.", body: "The lens closes gently: atmosphere, orbit, and shadow converge into one readable signal.", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "SIGNAL / LOCKED" },
 ];
 
 function sceneImageOpacity(index: number, progress: number) {
@@ -91,7 +92,7 @@ function CursorRevealCard({ item, index }: { item: (typeof highlights)[number]; 
   );
 }
 
-function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement | null> }) {
+function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HTMLVideoElement | null>; motionEnabled: boolean }) {
   const sectionRef = useRef<HTMLElement>(null);
   const [progress, setProgress] = useState(0);
   const targetProgress = useRef(0);
@@ -136,7 +137,7 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
 
     const syncVideo = (displayProgress: number, now: number) => {
       const video = videoRef.current;
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reducedMotion = !motionEnabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!video || reducedMotion || video.readyState < 2 || !Number.isFinite(video.duration) || video.duration <= 0) return;
       // Seeking a compressed video on every scroll event causes decoder contention. Cap seeks to 30fps.
       if (now - lastVideoSyncAt.current < 33) return;
@@ -152,7 +153,7 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
     const tick = (now: number) => {
       const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reducedMotion = !motionEnabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const smoothing = reducedMotion ? 1 : 1 - Math.exp(-dt * 11);
       smoothedProgress.current += (targetProgress.current - smoothedProgress.current) * smoothing;
       const displayProgress = smoothedProgress.current;
@@ -190,10 +191,10 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
     };
-  }, [videoRef]);
+  }, [videoRef, motionEnabled]);
 
   return (
-    <section ref={sectionRef} id="scroll-story" className="relative h-[280vh] w-full" aria-label="Lumina observation sequence">
+    <section ref={sectionRef} id="scroll-story" className="relative h-[330vh] w-full" aria-label="Lumina observation sequence">
       <div className="sticky top-0 flex min-h-screen items-center py-16">
         <div ref={panelRef} onPointerMove={handlePanelPointerMove} className="reveal-panel relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16" style={{ "--cursor-x": "50%", "--cursor-y": "50%", transform: `perspective(1400px) rotateX(${(0.5 - progress) * 1.5}deg)` } as React.CSSProperties}>
           <div className="lens-field pointer-events-none absolute inset-0 opacity-80" aria-hidden="true" />
@@ -202,7 +203,9 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
           <div className="absolute inset-0 bg-gradient-to-r from-[#050912]/95 via-[#050912]/45 to-transparent" aria-hidden="true" />
           <div className="motion-scanline pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[#a8e8ff]/30" style={{ transform: `translateY(${(progress - 0.5) * 220}px)` }} aria-hidden="true" />
           <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)`, opacity: activeScene === 3 ? 0.55 + Math.max(0, (progress - 0.7) / 0.3) * 0.3 : 0.55 }} aria-hidden="true" />
-          <div className="eclipse-veil pointer-events-none absolute inset-0" style={{ opacity: activeScene === 3 ? Math.max(0, (progress - 0.68) / 0.32) : 0, transform: `scale(${1 + Math.max(0, progress - 0.68) * 0.12})` }} aria-hidden="true" />
+          <div className="eclipse-veil pointer-events-none absolute inset-0" style={{ opacity: activeScene >= 3 ? Math.max(0, (progress - 0.62) / 0.38) : 0, transform: `scale(${1 + Math.max(0, progress - 0.62) * 0.12})` }} aria-hidden="true" />
+          <div className="scene-transition-wash pointer-events-none absolute inset-0" style={{ opacity: activeScene === 4 ? Math.max(0, (progress - 0.82) / 0.18) : 0 }} aria-hidden="true" />
+          <div className="observatory-metrics pointer-events-none absolute right-6 top-6 z-10 hidden text-right md:block" aria-hidden="true"><span>LIVE ARRAY / 05</span><strong>{Math.round(progress * 100)}%</strong><small>{activeScene === 4 ? "SIGNAL CONVERGENCE" : "ATMOSPHERIC INDEX"}</small></div>
 
           <div className="relative z-10 grid w-full grid-cols-1 gap-12 md:grid-cols-[minmax(0,1fr)_16rem] md:items-end">
             <div className="max-w-xl will-change-transform" style={{ opacity: 0.98, transform: `translate3d(${(progress - activeScene / observationScenes.length) * -22}px, 0, 0)` }}>
@@ -212,7 +215,7 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
               <div className="mt-8 flex items-center gap-4 text-[10px] uppercase tracking-[0.18em] text-white/45"><span className="text-[#a8e8ff]">{scene.note}</span><span className="h-px w-12 bg-white/20" /><span>Scroll / scrub</span></div>
             </div>
 
-            <div className="flex items-end justify-between gap-6 md:block"><div className="mb-5 text-right text-[10px] uppercase tracking-[0.22em] text-white/40 md:text-left">Sequence / 04</div><div className="flex items-center gap-3 md:block"><div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/15 md:h-32 md:w-px md:rounded-none"><div className="absolute left-0 top-0 h-full bg-[#a8e8ff] transition-[width] duration-150 md:bottom-0 md:left-0 md:top-auto md:h-auto md:w-full md:transition-[height]" style={{ width: `${progress * 100}%`, height: undefined }} /></div><div className="text-3xl font-light tracking-[-0.06em] text-white/85">{scene.index}<span className="text-sm text-white/30"> / 04</span></div></div></div>
+            <div className="flex items-end justify-between gap-6 md:block"><div className="mb-5 text-right text-[10px] uppercase tracking-[0.22em] text-white/40 md:text-left">Sequence / 05</div><div className="flex items-center gap-3 md:block"><div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/15 md:h-32 md:w-px md:rounded-none"><div className="absolute left-0 top-0 h-full bg-[#a8e8ff] transition-[width] duration-150 md:bottom-0 md:left-0 md:top-auto md:h-auto md:w-full md:transition-[height]" style={{ width: `${progress * 100}%`, height: undefined }} /></div><div className="text-3xl font-light tracking-[-0.06em] text-white/85">{scene.index}<span className="text-sm text-white/30"> / 05</span></div></div></div>
           </div>
         </div>
       </div>
@@ -222,14 +225,14 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
 
 function ContextCursor() {
   const [position, setPosition] = useState({ x: -80, y: -80 });
-  const [mode, setMode] = useState<"scroll" | "explore" | "play">("scroll");
+  const [mode, setMode] = useState<"scroll" | "explore" | "play" | "open">("scroll");
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const onMove = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       const context = target.closest<HTMLElement>("[data-cursor]")?.dataset.cursor;
-      setMode(context === "play" || context === "explore" ? context : "scroll");
+      setMode(context === "play" || context === "explore" || context === "open" ? context : "scroll");
       setPosition({ x: event.clientX, y: event.clientY });
       setVisible(true);
     };
@@ -242,7 +245,7 @@ function ContextCursor() {
     };
   }, []);
 
-  const label = mode === "play" ? "Play" : mode === "explore" ? "Explore" : "Scroll";
+  const label = mode === "play" ? "Play" : mode === "explore" ? "Explore" : mode === "open" ? "Open" : "Scroll";
   return (
     <div className={`context-cursor ${visible ? "is-visible" : ""} context-cursor--${mode}`} style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }} aria-hidden="true">
       <span className="context-cursor__core" />
@@ -286,8 +289,11 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
+  const [motionEnabled, setMotionEnabled] = useState(true);
   const videoInitialized = useRef(false);
   const isReady = videoState === "ready";
+  const loaderPercent = Math.max(8, loadProgress);
+  const loaderStage = videoState === "error" ? "SIGNAL RETRY" : loaderPercent < 34 ? "CALIBRATING LENS" : loaderPercent < 78 ? "LOCKING SATELLITE" : "SIGNAL READY";
 
   const handleVideoProgress = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = event.currentTarget;
@@ -308,9 +314,10 @@ export default function Home() {
   };
 
   return (
-    <main className="relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white">
+    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"}`}>
       <ContextCursor />
       <ScrollCue />
+      <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button>
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
@@ -332,16 +339,24 @@ export default function Home() {
       </video>
       <div className={`satellite-loader ${isReady ? "satellite-loader--hidden" : ""}`} role="status" aria-live="polite">
         <div className="satellite-loader__backdrop" />
+        <div className="satellite-loader__scanlines" aria-hidden="true" />
+        <div className="satellite-loader__grid" aria-hidden="true" />
         <div className="satellite-loader__orbit satellite-loader__orbit--one" />
         <div className="satellite-loader__orbit satellite-loader__orbit--two" />
-        <div className="satellite-loader__signal"><span /><span /><span /></div>
+        <div className="satellite-loader__orbit satellite-loader__orbit--three" />
+        <div className="satellite-loader__crosshair" aria-hidden="true"><i /><i /><i /><i /><span /></div>
+        <div className="satellite-loader__signal"><span /><span /><span /><span /><span /></div>
+        <div className="satellite-loader__telemetry satellite-loader__telemetry--left" aria-hidden="true"><span>LAT 37.7749° N</span><span>LON 122.4194° W</span><span>ALT 408 KM</span></div>
+        <div className="satellite-loader__telemetry satellite-loader__telemetry--right" aria-hidden="true"><span>UPLINK / 05</span><span>PACKET / {String(Math.max(1, Math.round(loaderPercent / 10))).padStart(2, "0")}</span><span>ENCRYPT / LUMINA</span></div>
         <div className="satellite-loader__content">
-          <p className="satellite-loader__eyebrow">LUMINA / ORBITAL LINK</p>
+          <div className="satellite-loader__brand"><span className="satellite-loader__brand-mark">✦</span><span>LUMINA</span><b>ORBITAL NETWORK</b></div>
+          <p className="satellite-loader__eyebrow">MISSION 05 / ATMOSPHERIC LINK</p>
           <h2>سيتم ربطك بالقمر الصناعي</h2>
-          <p className="satellite-loader__status">{videoState === "error" ? "إعادة محاولة استقبال الإشارة…" : "جارٍ تحميل الإشارة الكونية"}</p>
-          <div className="satellite-loader__progress"><span style={{ width: `${Math.max(8, loadProgress)}%` }} /></div>
-          <span className="satellite-loader__percent">{videoState === "error" ? "—" : `${Math.max(loadProgress, 8)}%`}</span>
+          <p className="satellite-loader__status"><span>{loaderStage}</span><em>{videoState === "error" ? "إعادة محاولة استقبال الإشارة…" : "جاري تهيئة نافذة الرصد"}</em></p>
+          <div className="satellite-loader__progress"><span style={{ width: `${loaderPercent}%` }} /></div>
+          <div className="satellite-loader__readout"><span>VIDEO BUFFER</span><strong>{videoState === "error" ? "--" : `${loaderPercent}%`}</strong><span>READY / {isReady ? "YES" : "SYNC"}</span></div>
         </div>
+        <div className="satellite-loader__footer"><span>NO SIGNAL IS LOST</span><span>SCANNING THE QUIET BETWEEN EVENTS</span><span>v.05.01</span></div>
       </div>
       <div className="fixed inset-0 z-[1] bg-[linear-gradient(180deg,rgba(3,8,18,0.38)_0%,rgba(3,8,18,0.15)_44%,rgba(3,8,18,0.78)_100%)]" aria-hidden="true" />
       <div className="fixed inset-0 z-[2] lens-field" aria-hidden="true" />
@@ -381,7 +396,7 @@ export default function Home() {
               A calm window into global events and cosmic wonders, assembled for a more attentive world.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-4">
-              <a href="#scroll-story" className="group inline-flex items-center gap-3 rounded-full bg-[#a8e8ff] px-5 py-3 text-xs font-medium text-slate-950 shadow-[0_0_30px_rgba(168,232,255,0.24)] transition duration-200 ease-out hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <a href="#scroll-story" data-cursor="open" className="group inline-flex items-center gap-3 rounded-full bg-[#a8e8ff] px-5 py-3 text-xs font-medium text-slate-950 shadow-[0_0_30px_rgba(168,232,255,0.24)] transition duration-200 ease-out hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 Enter the observatory <ArrowUpRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </a>
               <a href="#scroll-story" data-cursor="play" className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-xs text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
@@ -402,7 +417,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        <ScrollStory videoRef={videoRef} />
+        <ScrollStory videoRef={videoRef} motionEnabled={motionEnabled} />
 
         <motion.footer
           id="lumina-footer"

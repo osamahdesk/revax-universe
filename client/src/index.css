@@ -1,4 +1,5 @@
 /* Lumina — مرصد الضوء السائل: طبقات شفافة باردة فوق حركة كونية داكنة. */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Tajawal:wght@400;500;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -313,3 +314,57 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+
+/* Cinematic orbital loader: NASA-console precision with Lumina's cold liquid-glass palette. */
+.satellite-loader { isolation: isolate; font-family: "Orbitron", "Space Grotesk", "Helvetica Regular", Arial, sans-serif; background: rgba(2,6,13,.42); }
+.satellite-loader__backdrop { inset: 0; background: url('/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg') center / cover no-repeat; filter: brightness(.46) saturate(.82) contrast(1.08); transform: scale(1.04); }
+.satellite-loader__backdrop::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,7,18,.35), rgba(2,8,18,.22) 48%, rgba(1,5,12,.86)), radial-gradient(ellipse at center, transparent 28%, rgba(0,2,8,.72) 100%); }
+.satellite-loader__scanlines { position: absolute; inset: 0; z-index: 1; opacity: .16; background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(168,232,255,.16) 6px, transparent 7px); mix-blend-mode: screen; animation: loader-scan 7s linear infinite; }
+.satellite-loader__grid { position: absolute; inset: 7vh 6vw; z-index: 1; opacity: .2; background-image: linear-gradient(rgba(168,232,255,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(168,232,255,.14) 1px, transparent 1px); background-size: 72px 72px; mask-image: radial-gradient(ellipse at center, #000, transparent 72%); transform: perspective(800px) rotateX(54deg) translateY(28%); transform-origin: center bottom; }
+.satellite-loader__orbit { z-index: 2; border-color: rgba(168,232,255,.28); box-shadow: 0 0 42px rgba(89,190,255,.13), inset 0 0 28px rgba(168,232,255,.06); }
+.satellite-loader__orbit--three { width: min(46vw, 460px); height: min(18vw, 180px); opacity: .32; transform: rotate(-48deg); animation: satellite-orbit-three 13s ease-in-out infinite alternate; }
+.satellite-loader__crosshair { position: absolute; z-index: 3; width: min(42vw, 360px); aspect-ratio: 1; border: 1px solid rgba(168,232,255,.26); border-radius: 50%; box-shadow: 0 0 0 12px rgba(168,232,255,.018), 0 0 70px rgba(81,175,255,.12); animation: loader-crosshair 8s ease-in-out infinite alternate; }
+.satellite-loader__crosshair::before, .satellite-loader__crosshair::after { content: ""; position: absolute; background: rgba(168,232,255,.22); }
+.satellite-loader__crosshair::before { left: 50%; top: -7%; width: 1px; height: 114%; }
+.satellite-loader__crosshair::after { top: 50%; left: -7%; width: 114%; height: 1px; }
+.satellite-loader__crosshair i { position: absolute; width: 12px; height: 12px; border-color: #a8e8ff; border-style: solid; opacity: .75; }
+.satellite-loader__crosshair i:nth-child(1) { inset: -1px auto auto -1px; border-width: 1px 0 0 1px; }
+.satellite-loader__crosshair i:nth-child(2) { inset: -1px -1px auto auto; border-width: 1px 1px 0 0; }
+.satellite-loader__crosshair i:nth-child(3) { inset: auto auto -1px -1px; border-width: 0 0 1px 1px; }
+.satellite-loader__crosshair i:nth-child(4) { inset: auto -1px -1px auto; border-width: 0 1px 1px 0; }
+.satellite-loader__crosshair span { position: absolute; left: calc(50% - 3px); top: calc(50% - 3px); width: 6px; height: 6px; border-radius: 50%; background: #dff8ff; box-shadow: 0 0 20px 5px rgba(168,232,255,.7); }
+.satellite-loader__signal { z-index: 4; margin-bottom: 230px; gap: 5px; }
+.satellite-loader__signal span { width: 1px; height: 17px; }
+.satellite-loader__signal span:nth-child(4) { height: 29px; animation-delay: 360ms; }
+.satellite-loader__signal span:nth-child(5) { height: 11px; animation-delay: 480ms; }
+.satellite-loader__telemetry { position: absolute; z-index: 4; top: 50%; display: grid; gap: 8px; color: rgba(168,232,255,.58); font-size: 8px; letter-spacing: .18em; line-height: 1.2; }
+.satellite-loader__telemetry--left { left: 5vw; text-align: left; }
+.satellite-loader__telemetry--right { right: 5vw; text-align: right; }
+.satellite-loader__telemetry span::before { content: "// "; color: rgba(255,255,255,.28); }
+.satellite-loader__content { z-index: 5; width: min(90vw, 520px); margin-top: 176px; padding: 28px 32px 24px; border: 1px solid rgba(168,232,255,.2); border-radius: 24px; background: linear-gradient(145deg, rgba(12,31,53,.38), rgba(2,8,18,.46)); box-shadow: inset 0 1px rgba(255,255,255,.16), 0 0 80px rgba(45,146,222,.12); backdrop-filter: blur(12px) saturate(1.2); }
+.satellite-loader__brand { display: flex; align-items: center; gap: 9px; margin-bottom: 26px; color: #effcff; font-size: 11px; letter-spacing: .3em; }
+.satellite-loader__brand-mark { display: grid; width: 25px; height: 25px; place-items: center; border: 1px solid rgba(168,232,255,.5); border-radius: 50%; color: #a8e8ff; font-size: 13px; box-shadow: 0 0 20px rgba(168,232,255,.26); }
+.satellite-loader__brand b { margin-left: auto; color: rgba(168,232,255,.58); font-size: 7px; font-weight: 400; letter-spacing: .18em; }
+.satellite-loader__eyebrow { margin-bottom: 13px; color: rgba(168,232,255,.78); font-size: 8px; letter-spacing: .3em; }
+ .satellite-loader__content h2 { font-family: "Tajawal", "Orbitron", "Helvetica Regular", Arial, sans-serif; font-size: clamp(1.4rem, 3.6vw, 2.2rem); line-height: 1.2; letter-spacing: -.055em; text-shadow: 0 0 26px rgba(168,232,255,.2); }
+.satellite-loader__status { display: flex; justify-content: space-between; gap: 14px; margin-top: 18px; color: rgba(168,232,255,.84); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; }
+.satellite-loader__status em { color: rgba(235,250,255,.48); font-style: normal; letter-spacing: .05em; text-transform: none; }
+.satellite-loader__progress { margin-top: 26px; height: 3px; background: rgba(255,255,255,.12); }
+.satellite-loader__progress span { background: linear-gradient(90deg, #42b7ed, #dffbff 65%, #fff); box-shadow: 0 0 18px rgba(168,232,255,.95); }
+.satellite-loader__readout { display: flex; justify-content: space-between; margin-top: 11px; color: rgba(235,250,255,.42); font-size: 7px; letter-spacing: .18em; }
+.satellite-loader__readout strong { color: #a8e8ff; font-size: 10px; font-weight: 400; }
+.satellite-loader__footer { position: absolute; right: 5vw; bottom: 4vh; left: 5vw; z-index: 5; display: flex; justify-content: space-between; color: rgba(168,232,255,.45); font-size: 7px; letter-spacing: .2em; }
+.motion-toggle { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 25; display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; color: rgba(223,248,255,.7); font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
+.motion-toggle__dot { width: 5px; height: 5px; border-radius: 50%; background: #a8e8ff; box-shadow: 0 0 12px #a8e8ff; }
+.motion-paused .orbital-line, .motion-paused .satellite-loader__backdrop, .motion-paused .satellite-loader__scanlines, .motion-paused .satellite-loader__orbit, .motion-paused .satellite-loader__crosshair, .motion-paused .satellite-loader__signal span { animation-play-state: paused; }
+.observatory-metrics { display: grid; gap: 5px; color: rgba(168,232,255,.55); font-size: 7px; letter-spacing: .18em; }
+.observatory-metrics strong { color: rgba(235,250,255,.86); font-size: 18px; font-weight: 300; letter-spacing: -.04em; }
+.observatory-metrics small { color: rgba(255,255,255,.34); font-size: 6px; letter-spacing: .15em; }
+.scene-transition-wash { background: radial-gradient(circle at 72% 50%, rgba(223,251,255,.34), transparent 17%), linear-gradient(105deg, transparent 35%, rgba(168,232,255,.16) 49%, transparent 64%); mix-blend-mode: screen; filter: blur(6px); }
+@keyframes loader-scan { from { transform: translateY(-8%); } to { transform: translateY(8%); } }
+@keyframes satellite-orbit-three { from { transform: rotate(-48deg) translate3d(-2%, 2%, 0); } to { transform: rotate(-38deg) translate3d(2%, -2%, 0); } }
+@keyframes loader-crosshair { from { transform: rotate(-3deg) scale(.96); opacity: .65; } to { transform: rotate(4deg) scale(1.04); opacity: 1; } }
+@media (max-width: 700px) { .satellite-loader__telemetry { display: none; } .satellite-loader__content { padding: 23px 20px 20px; } .satellite-loader__status { display: grid; gap: 6px; } .satellite-loader__footer { font-size: 6px; } .satellite-loader__footer span:nth-child(2) { display: none; } .satellite-loader__crosshair { width: 72vw; } .motion-toggle { top: auto; right: 1rem; bottom: 1rem; } }
+@media (prefers-reduced-motion: reduce) { .satellite-loader__scanlines, .satellite-loader__grid, .satellite-loader__crosshair, .satellite-loader__orbit--three { animation: none; } }
+@media (pointer: coarse) { .motion-toggle { display: none; } }
