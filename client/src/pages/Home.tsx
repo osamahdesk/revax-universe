@@ -56,46 +56,59 @@ function sceneImageOpacity(index: number, progress: number) {
 function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement | null> }) {
   const sectionRef = useRef<HTMLElement>(null);
   const [progress, setProgress] = useState(0);
+  const targetProgress = useRef(0);
+  const smoothedProgress = useRef(0);
+  const lastVideoTime = useRef(-1);
   const activeScene = Math.min(observationScenes.length - 1, Math.floor(progress * observationScenes.length));
   const scene = observationScenes[activeScene];
 
   useEffect(() => {
     let frame = 0;
-    const update = () => {
+    let lastTime = performance.now();
+    const update = (now = performance.now()) => {
       const section = sectionRef.current;
       if (!section) return;
       const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
-      const nextProgress = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / scrollable));
-      setProgress(nextProgress);
-      const video = videoRef.current;
+      targetProgress.current = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / scrollable));
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
+      lastTime = now;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const smoothing = reducedMotion ? 1 : 1 - Math.exp(-dt * 8);
+      smoothedProgress.current += (targetProgress.current - smoothedProgress.current) * smoothing;
+      const easedProgress = smoothedProgress.current;
+      setProgress(easedProgress);
+      const video = videoRef.current;
       if (video && reducedMotion) {
         video.pause();
-      } else if (video && nextProgress > 0.01 && Number.isFinite(video.duration) && video.duration > 0) {
-        video.pause();
-        video.currentTime = nextProgress * video.duration;
-      } else if (video && nextProgress <= 0.01) {
+      } else if (video && easedProgress > 0.01 && Number.isFinite(video.duration) && video.duration > 0) {
+        if (!video.paused) video.pause();
+        const nextTime = easedProgress * video.duration;
+        if (Math.abs(nextTime - lastVideoTime.current) > 0.012) {
+          video.currentTime = nextTime;
+          lastVideoTime.current = nextTime;
+        }
+      } else if (video && easedProgress <= 0.01) {
         video.play().catch(() => undefined);
       }
+      frame = requestAnimationFrame(update);
     };
-    const onScroll = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(update); };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onScroll); };
+    frame = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frame);
   }, [videoRef]);
 
   return (
     <section ref={sectionRef} id="scroll-story" className="relative h-[280vh] w-full" aria-label="Lumina observation sequence">
       <div className="sticky top-0 flex min-h-screen items-center py-16">
-        <div className="relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16">
+        <div className="relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16" style={{ transform: `perspective(1400px) rotateX(${(0.5 - progress) * 1.5}deg)` }}>
           <div className="lens-field pointer-events-none absolute inset-0 opacity-80" aria-hidden="true" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_48%,transparent_0,rgba(2,7,16,0.1)_35%,rgba(2,7,16,0.88)_100%)]" aria-hidden="true" />
-          {observationScenes.map((item, index) => <img key={item.index} src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center transition-[opacity,transform] duration-500 ease-out" style={{ opacity: sceneImageOpacity(index, progress), transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04})` }} />)}
+          {observationScenes.map((item, index) => <img key={item.index} src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center transition-[opacity,transform] duration-500 ease-out" style={{ opacity: sceneImageOpacity(index, progress), transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} />)}
           <div className="absolute inset-0 bg-gradient-to-r from-[#050912]/95 via-[#050912]/45 to-transparent" aria-hidden="true" />
+          <div className="motion-scanline pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[#a8e8ff]/30" style={{ transform: `translateY(${(progress - 0.5) * 220}px)` }} aria-hidden="true" />
+          <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)` }} aria-hidden="true" />
 
           <div className="relative z-10 grid w-full grid-cols-1 gap-12 md:grid-cols-[minmax(0,1fr)_16rem] md:items-end">
-            <motion.div key={scene.index} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.48, ease: "easeOut" }} className="max-w-xl">
+            <motion.div key={scene.index} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0, x: (progress - activeScene / observationScenes.length) * -22 }} transition={{ duration: 0.48, ease: [0.23, 1, 0.32, 1] }} className="max-w-xl">
               <p className="mb-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.26em] text-[#a8e8ff]"><span className="h-px w-10 bg-[#a8e8ff]" /> {scene.kicker}</p>
               <h2 className="max-w-lg text-4xl font-medium leading-[0.96] tracking-[-0.045em] text-white sm:text-5xl md:text-6xl">{scene.title}</h2>
               <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/65">{scene.body}</p>
