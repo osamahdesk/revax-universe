@@ -66,35 +66,64 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
   useEffect(() => {
     let frame = 0;
     let lastTime = performance.now();
-    const update = (now = performance.now()) => {
+
+    const readTarget = () => {
       const section = sectionRef.current;
       if (!section) return;
       const scrollable = Math.max(1, section.offsetHeight - window.innerHeight);
       targetProgress.current = Math.max(0, Math.min(1, -section.getBoundingClientRect().top / scrollable));
+    };
+
+    const syncVideo = (displayProgress: number) => {
+      const video = videoRef.current;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!video || reducedMotion || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      const nextTime = displayProgress * video.duration;
+      if (Math.abs(nextTime - lastVideoTime.current) > 0.008) {
+        // Keep the media element paused: scroll position is the only transport control.
+        if (!video.paused) video.pause();
+        video.currentTime = nextTime;
+        lastVideoTime.current = nextTime;
+      }
+    };
+
+    const tick = (now: number) => {
       const dt = Math.min(0.05, Math.max(0.001, (now - lastTime) / 1000));
       lastTime = now;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const smoothing = reducedMotion ? 1 : 1 - Math.exp(-dt * 8);
+      const smoothing = reducedMotion ? 1 : 1 - Math.exp(-dt * 11);
       smoothedProgress.current += (targetProgress.current - smoothedProgress.current) * smoothing;
-      const easedProgress = smoothedProgress.current;
-      setProgress(easedProgress);
-      const video = videoRef.current;
-      if (video && reducedMotion) {
-        video.pause();
-      } else if (video && easedProgress > 0.01 && Number.isFinite(video.duration) && video.duration > 0) {
-        if (!video.paused) video.pause();
-        const nextTime = easedProgress * video.duration;
-        if (Math.abs(nextTime - lastVideoTime.current) > 0.012) {
-          video.currentTime = nextTime;
-          lastVideoTime.current = nextTime;
-        }
-      } else if (video && easedProgress <= 0.01) {
-        video.play().catch(() => undefined);
+      const displayProgress = smoothedProgress.current;
+      setProgress(displayProgress);
+      syncVideo(displayProgress);
+
+      if (Math.abs(targetProgress.current - displayProgress) < 0.00035) {
+        smoothedProgress.current = targetProgress.current;
+        setProgress(targetProgress.current);
+        syncVideo(targetProgress.current);
+        frame = 0;
+        return;
       }
-      frame = requestAnimationFrame(update);
+      frame = requestAnimationFrame(tick);
     };
-    frame = requestAnimationFrame(update);
-    return () => cancelAnimationFrame(frame);
+
+    const onScroll = () => {
+      readTarget();
+      if (!frame) {
+        lastTime = performance.now();
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    const onResize = () => { readTarget(); onScroll(); };
+    readTarget();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
   }, [videoRef]);
 
   return (
@@ -173,7 +202,7 @@ export default function Home() {
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
-        autoPlay
+        preload="metadata"
         loop
         muted
         playsInline
@@ -223,7 +252,7 @@ export default function Home() {
               <a href="#scroll-story" className="group inline-flex items-center gap-3 rounded-full bg-[#a8e8ff] px-5 py-3 text-xs font-medium text-slate-950 shadow-[0_0_30px_rgba(168,232,255,0.24)] transition duration-200 ease-out hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 Enter the observatory <ArrowUpRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </a>
-              <a href="#scroll-story" data-cursor="play" onClick={() => videoRef.current?.play().catch(() => undefined)} className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-xs text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <a href="#scroll-story" data-cursor="play" className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-xs text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 <span className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-white/10"><Play size={11} fill="currentColor" /></span>
                 Watch the signal
               </a>
