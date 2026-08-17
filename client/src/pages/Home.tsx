@@ -97,6 +97,8 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
   const targetProgress = useRef(0);
   const smoothedProgress = useRef(0);
   const lastVideoTime = useRef(-1);
+  const lastVideoSyncAt = useRef(0);
+  const renderedProgress = useRef(0);
   const activeScene = Math.min(observationScenes.length - 1, Math.floor(progress * observationScenes.length));
   const scene = observationScenes[activeScene];
 
@@ -110,16 +112,18 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
       targetProgress.current = Math.max(0, Math.min(1, window.scrollY / maxScroll));
     };
 
-    const syncVideo = (displayProgress: number) => {
+    const syncVideo = (displayProgress: number, now: number) => {
       const video = videoRef.current;
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (!video || reducedMotion || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      if (!video || reducedMotion || video.readyState < 2 || !Number.isFinite(video.duration) || video.duration <= 0) return;
+      // Seeking a compressed video on every scroll event causes decoder contention. Cap seeks to 30fps.
+      if (now - lastVideoSyncAt.current < 33) return;
       const nextTime = displayProgress * video.duration;
-      if (Math.abs(nextTime - lastVideoTime.current) > 0.008) {
-        // Keep the media element paused: scroll position is the only transport control.
+      if (Math.abs(nextTime - lastVideoTime.current) > 0.028) {
         if (!video.paused) video.pause();
         video.currentTime = nextTime;
         lastVideoTime.current = nextTime;
+        lastVideoSyncAt.current = now;
       }
     };
 
@@ -130,13 +134,17 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
       const smoothing = reducedMotion ? 1 : 1 - Math.exp(-dt * 11);
       smoothedProgress.current += (targetProgress.current - smoothedProgress.current) * smoothing;
       const displayProgress = smoothedProgress.current;
-      setProgress(displayProgress);
-      syncVideo(displayProgress);
+      if (Math.abs(displayProgress - renderedProgress.current) > 0.0012) {
+        renderedProgress.current = displayProgress;
+        setProgress(displayProgress);
+      }
+      syncVideo(displayProgress, now);
 
       if (Math.abs(targetProgress.current - displayProgress) < 0.00035) {
         smoothedProgress.current = targetProgress.current;
+        renderedProgress.current = targetProgress.current;
         setProgress(targetProgress.current);
-        syncVideo(targetProgress.current);
+        syncVideo(targetProgress.current, now);
         frame = 0;
         return;
       }
@@ -168,19 +176,19 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
         <div className="relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16" style={{ transform: `perspective(1400px) rotateX(${(0.5 - progress) * 1.5}deg)` }}>
           <div className="lens-field pointer-events-none absolute inset-0 opacity-80" aria-hidden="true" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_48%,transparent_0,rgba(2,7,16,0.1)_35%,rgba(2,7,16,0.88)_100%)]" aria-hidden="true" />
-          {observationScenes.map((item, index) => <img key={item.index} src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center transition-[opacity,transform] duration-500 ease-out" style={{ opacity: sceneImageOpacity(index, progress), transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} />)}
+          {observationScenes.map((item, index) => <img key={item.index} src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center will-change-[opacity,transform]" style={{ opacity: sceneImageOpacity(index, progress), transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} />)}
           <div className="absolute inset-0 bg-gradient-to-r from-[#050912]/95 via-[#050912]/45 to-transparent" aria-hidden="true" />
           <div className="motion-scanline pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[#a8e8ff]/30" style={{ transform: `translateY(${(progress - 0.5) * 220}px)` }} aria-hidden="true" />
           <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)`, opacity: activeScene === 3 ? 0.55 + Math.max(0, (progress - 0.7) / 0.3) * 0.3 : 0.55 }} aria-hidden="true" />
           <div className="eclipse-veil pointer-events-none absolute inset-0" style={{ opacity: activeScene === 3 ? Math.max(0, (progress - 0.68) / 0.32) : 0, transform: `scale(${1 + Math.max(0, progress - 0.68) * 0.12})` }} aria-hidden="true" />
 
           <div className="relative z-10 grid w-full grid-cols-1 gap-12 md:grid-cols-[minmax(0,1fr)_16rem] md:items-end">
-            <motion.div key={scene.index} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0, x: (progress - activeScene / observationScenes.length) * -22 }} transition={{ duration: 0.48, ease: [0.23, 1, 0.32, 1] }} className="max-w-xl">
+            <div className="max-w-xl will-change-transform" style={{ opacity: 0.98, transform: `translate3d(${(progress - activeScene / observationScenes.length) * -22}px, 0, 0)` }}>
               <p className="mb-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.26em] text-[#a8e8ff]"><span className="h-px w-10 bg-[#a8e8ff]" /> {scene.kicker}</p>
               <h2 className="max-w-lg text-4xl font-medium leading-[0.96] tracking-[-0.045em] text-white sm:text-5xl md:text-6xl">{scene.title}</h2>
               <p className="mt-6 max-w-sm text-sm leading-relaxed text-white/65">{scene.body}</p>
               <div className="mt-8 flex items-center gap-4 text-[10px] uppercase tracking-[0.18em] text-white/45"><span className="text-[#a8e8ff]">{scene.note}</span><span className="h-px w-12 bg-white/20" /><span>Scroll / scrub</span></div>
-            </motion.div>
+            </div>
 
             <div className="flex items-end justify-between gap-6 md:block"><div className="mb-5 text-right text-[10px] uppercase tracking-[0.22em] text-white/40 md:text-left">Sequence / 04</div><div className="flex items-center gap-3 md:block"><div className="relative h-1.5 w-40 overflow-hidden rounded-full bg-white/15 md:h-32 md:w-px md:rounded-none"><div className="absolute left-0 top-0 h-full bg-[#a8e8ff] transition-[width] duration-150 md:bottom-0 md:left-0 md:top-auto md:h-auto md:w-full md:transition-[height]" style={{ width: `${progress * 100}%`, height: undefined }} /></div><div className="text-3xl font-light tracking-[-0.06em] text-white/85">{scene.index}<span className="text-sm text-white/30"> / 04</span></div></div></div>
           </div>
