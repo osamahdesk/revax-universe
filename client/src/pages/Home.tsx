@@ -41,10 +41,10 @@ const highlights = [
 ];
 
 const observationScenes = [
-  { index: "01", kicker: "ORBITAL STUDY / 01", title: "Watch what gathers beyond the horizon.", body: "A slow field guide to the forces that shape our shared sky. Scroll to move through the signal.", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", note: "PERIGEE / 42.8°" },
-  { index: "02", kicker: "ATMOSPHERIC STUDY / 02", title: "The atmosphere keeps its own time.", body: "Trace the quiet movement of weather, light, and pressure as one continuous observation.", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "AURORA / ACTIVE" },
-  { index: "03", kicker: "DEEP FIELD / 03", title: "Clarity begins where the familiar ends.", body: "One final turn of the lens. Leave with a wider frame for the things still becoming visible.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "ECLIPSE / 03:17" },
-  { index: "04", kicker: "ECLIPSE THRESHOLD / 04", title: "The dark edge makes the signal visible.", body: "Orbit resolves into eclipse: a measured crossing where shadow becomes another kind of light.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "UMBRA / 04:12" },
+  { index: "01", kicker: "ORBITAL STUDY / 01", title: "Watch what gathers beyond the horizon.", body: "A slow field guide to the forces that shape our shared sky. Scroll to move through the signal.", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "PERIGEE / 42.8°" },
+  { index: "02", kicker: "ATMOSPHERIC STUDY / 02", title: "The atmosphere keeps its own time.", body: "Trace the quiet movement of weather, light, and pressure as one continuous observation.", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "AURORA / ACTIVE" },
+  { index: "03", kicker: "DEEP FIELD / 03", title: "Clarity begins where the familiar ends.", body: "One final turn of the lens. Leave with a wider frame for the things still becoming visible.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", note: "ECLIPSE / 03:17" },
+  { index: "04", kicker: "ECLIPSE THRESHOLD / 04", title: "The dark edge makes the signal visible.", body: "Orbit resolves into eclipse: a measured crossing where shadow becomes another kind of light.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "UMBRA / 04:12" },
 ];
 
 function sceneImageOpacity(index: number, progress: number) {
@@ -99,8 +99,30 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
   const lastVideoTime = useRef(-1);
   const lastVideoSyncAt = useRef(0);
   const renderedProgress = useRef(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const pointerPoint = useRef({ x: 50, y: 50 });
+  const pointerFrame = useRef(0);
   const activeScene = Math.min(observationScenes.length - 1, Math.floor(progress * observationScenes.length));
   const scene = observationScenes[activeScene];
+
+  const handlePanelPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "touch") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    pointerPoint.current = {
+      x: Math.round(((event.clientX - rect.left) / rect.width) * 100),
+      y: Math.round(((event.clientY - rect.top) / rect.height) * 100),
+    };
+    if (!pointerFrame.current) {
+      pointerFrame.current = requestAnimationFrame(() => {
+        const panel = panelRef.current;
+        if (panel) {
+          panel.style.setProperty("--cursor-x", `${pointerPoint.current.x}%`);
+          panel.style.setProperty("--cursor-y", `${pointerPoint.current.y}%`);
+        }
+        pointerFrame.current = 0;
+      });
+    }
+  };
 
   useEffect(() => {
     let frame = 0;
@@ -173,10 +195,10 @@ function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement 
   return (
     <section ref={sectionRef} id="scroll-story" className="relative h-[280vh] w-full" aria-label="Lumina observation sequence">
       <div className="sticky top-0 flex min-h-screen items-center py-16">
-        <div className="relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16" style={{ transform: `perspective(1400px) rotateX(${(0.5 - progress) * 1.5}deg)` }}>
+        <div ref={panelRef} onPointerMove={handlePanelPointerMove} className="reveal-panel relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16" style={{ "--cursor-x": "50%", "--cursor-y": "50%", transform: `perspective(1400px) rotateX(${(0.5 - progress) * 1.5}deg)` } as React.CSSProperties}>
           <div className="lens-field pointer-events-none absolute inset-0 opacity-80" aria-hidden="true" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_48%,transparent_0,rgba(2,7,16,0.1)_35%,rgba(2,7,16,0.88)_100%)]" aria-hidden="true" />
-          {observationScenes.map((item, index) => <img key={item.index} src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center will-change-[opacity,transform]" style={{ opacity: sceneImageOpacity(index, progress), transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} />)}
+          {observationScenes.map((item, index) => <div key={item.index} className="reveal-scene absolute inset-0" style={{ opacity: sceneImageOpacity(index, progress) }}><img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center will-change-transform" style={{ transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} /><img src={item.revealImage} alt="" className="reveal-scene__image absolute inset-0 h-full w-full object-cover object-center" style={{ transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} /></div>)}
           <div className="absolute inset-0 bg-gradient-to-r from-[#050912]/95 via-[#050912]/45 to-transparent" aria-hidden="true" />
           <div className="motion-scanline pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[#a8e8ff]/30" style={{ transform: `translateY(${(progress - 0.5) * 220}px)` }} aria-hidden="true" />
           <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)`, opacity: activeScene === 3 ? 0.55 + Math.max(0, (progress - 0.7) / 0.3) * 0.3 : 0.55 }} aria-hidden="true" />
@@ -264,6 +286,7 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
+  const videoInitialized = useRef(false);
   const isReady = videoState === "ready";
 
   const handleVideoProgress = (event: React.SyntheticEvent<HTMLVideoElement>) => {
@@ -276,7 +299,10 @@ export default function Home() {
   const handleVideoReady = (event: React.SyntheticEvent<HTMLVideoElement>) => {
     const video = event.currentTarget;
     video.pause();
-    video.currentTime = 0;
+    if (!videoInitialized.current) {
+      video.currentTime = 0;
+      videoInitialized.current = true;
+    }
     setLoadProgress(100);
     setVideoState("ready");
   };

@@ -215,6 +215,10 @@
 .scroll-cue__arrow { font-size: 16px; line-height: 1; color: #a8e8ff; text-shadow: 0 0 14px rgba(168,232,255,0.9); }
 
 .cursor-reveal-card { --cursor-x: 50%; --cursor-y: 50%; isolation: isolate; contain: paint; }
+.reveal-panel { --cursor-x: 50%; --cursor-y: 50%; isolation: isolate; }
+.reveal-scene { pointer-events: none; }
+.reveal-scene__image { clip-path: circle(0px at var(--cursor-x) var(--cursor-y)); opacity: 0.98; filter: saturate(1.12) brightness(1.04); will-change: clip-path; }
+.reveal-panel:hover .reveal-scene__image { clip-path: circle(108px at var(--cursor-x) var(--cursor-y)); }
 .cursor-reveal-card__image, .cursor-reveal-card__reveal { transition: transform 380ms cubic-bezier(0.23, 1, 0.32, 1), filter 380ms ease; will-change: transform, clip-path; }
 .cursor-reveal-card__image { opacity: 0.78; filter: saturate(0.82) brightness(0.78); }
 .cursor-reveal-card__reveal { clip-path: circle(0px at var(--cursor-x) var(--cursor-y)); opacity: 0.96; filter: saturate(1.16) brightness(1.06); }
@@ -223,7 +227,7 @@
 .cursor-reveal-card__hint { position: absolute; right: 10px; top: 10px; z-index: 3; color: rgba(168,232,255,0.7); font-size: 7px; letter-spacing: 0.16em; opacity: 0; transform: translateY(-3px); transition: opacity 200ms ease, transform 200ms ease; pointer-events: none; }
 .cursor-reveal-card:hover .cursor-reveal-card__hint { opacity: 1; transform: translateY(0); }
 @media (pointer: coarse) {
-  .cursor-reveal-card__reveal { clip-path: none; opacity: 0; }
+  .cursor-reveal-card__reveal, .reveal-scene__image { clip-path: none; opacity: 0; }
   .cursor-reveal-card__hint { display: none; }
 }
 
