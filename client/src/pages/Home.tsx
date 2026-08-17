@@ -1,25 +1,183 @@
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+/* Lumina — مرصد الضوء السائل: الفيديو هو المشهد، والعناصر التحريرية زجاجية ودقيقة. */
+import { motion } from "framer-motion";
+import {
+  ArrowUpRight,
+  Facebook,
+  Instagram,
+  Music2,
+  Play,
+  Twitter,
+  Youtube,
+} from "lucide-react";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Best Practices, Design Guide and Common Pitfalls
- */
-export default function Home() {
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+const socialLinks = [
+  { label: "Music", icon: Music2, href: "https://www.tiktok.com/" },
+  { label: "Facebook", icon: Facebook, href: "https://www.facebook.com/" },
+  { label: "Twitter", icon: Twitter, href: "https://x.com/" },
+  { label: "YouTube", icon: Youtube, href: "https://www.youtube.com/" },
+  { label: "Instagram", icon: Instagram, href: "https://www.instagram.com/" },
+];
 
+const footerColumns = [
+  {
+    title: "Discover",
+    links: ["Labs & Workshops", "Deep Dive Series", "Global Circle", "Resource Vault", "Future Roadmap"],
+  },
+  {
+    title: "The Mission",
+    links: ["Origin Story", "The Collective", "Newsroom Hub", "Join the Team"],
+  },
+  {
+    title: "Concierge",
+    links: ["Get in Touch", "Legal Privacy", "User Agreement", "Report Concern"],
+  },
+];
+
+const highlights = [
+  { title: "Orbital stories", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg" },
+  { title: "Weather systems", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg" },
+  { title: "Farther horizons", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg" },
+];
+
+function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
+    <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+      <path d="M 4.688 136 C 68.373 136 120 187.627 120 251.312 C 120 252.883 119.967 254.445 119.905 256 L 0 256 L 0 136.096 C 1.555 136.034 3.117 136 4.688 136 Z M 251.312 136 C 252.883 136 254.445 136.034 256 136.096 L 256 256 L 136.095 256 C 136.032 254.438 136.001 252.875 136 251.312 C 136 187.627 187.627 136 251.312 136 Z M 119.905 0 C 119.967 1.555 120 3.117 120 4.688 C 120 68.373 68.373 120 4.687 120 C 3.117 120 1.555 119.967 0 119.905 L 0 0 Z M 256 119.905 C 254.445 119.967 252.883 120 251.312 120 C 187.627 120 136 68.373 136 4.687 C 136 3.117 136.033 1.555 136.095 0 L 256 0 Z" />
+    </svg>
+  );
+}
+
+export default function Home() {
+  return (
+    <main className="relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white">
+      <video
+        className="fixed inset-0 w-full h-full object-cover z-[0]"
+        autoPlay
+        loop
+        muted
+        playsInline
+        aria-hidden="true"
+      >
+        <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" type="video/mp4" />
+      </video>
+      <div className="fixed inset-0 z-[1] bg-[linear-gradient(180deg,rgba(3,8,18,0.38)_0%,rgba(3,8,18,0.15)_44%,rgba(3,8,18,0.78)_100%)]" aria-hidden="true" />
+      <div className="fixed inset-0 z-[2] lens-field" aria-hidden="true" />
+      <div className="fixed inset-0 z-[3] ambient-grain" aria-hidden="true" />
+
+      <div className="relative z-10 flex min-h-[115vh] w-full max-w-7xl flex-col px-5 pb-5 pt-5 sm:px-8 sm:pb-8 sm:pt-8 lg:px-12 lg:pb-10">
+        <header className="flex items-center justify-between text-white">
+          <a href="#top" className="group flex items-center gap-3 rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80" aria-label="Lumina home">
+            <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-[#a8e8ff]/30 bg-black/20 text-white backdrop-blur-md transition-transform duration-200 ease-out group-hover:scale-105">
+              <img src="/manus-storage/lumina-mark_457b65a3.png" className="absolute inset-0 h-full w-full scale-125 object-contain opacity-20" alt="" />
+              <LuminaSvgMark className="relative h-5 w-5 drop-shadow-[0_0_8px_rgba(168,232,255,0.9)]" />
+            </span>
+            <span className="text-sm font-medium tracking-[0.30em]">LUMINA</span>
+          </a>
+          <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-white/60">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#a8e8ff] shadow-[0_0_16px_#a8e8ff]" />
+            Viewing live
+          </div>
+        </header>
+
+        <section id="top" className="relative flex flex-1 flex-col justify-end pt-28 md:pt-40" aria-labelledby="lumina-title">
+          <div className="orbital-line pointer-events-none absolute -left-28 bottom-44 h-72 w-[42rem] rounded-full border border-white/10" aria-hidden="true" />
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="relative isolate max-w-3xl rounded-[2.25rem] px-5 py-6 sm:px-8 sm:py-8"
+          >
+            <div className="liquid-glass lens-halo absolute inset-0 -z-10 rounded-[2.25rem] bg-slate-950/10" aria-hidden="true" />
+            <p className="mb-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.28em] text-[#a8e8ff]/80">
+              <span className="h-px w-10 bg-[#a8e8ff]/80" /> A clearer view of the extraordinary
+            </p>
+            <h1 id="lumina-title" className="max-w-2xl text-5xl font-medium leading-[0.94] tracking-[-0.055em] text-white sm:text-6xl md:text-7xl lg:text-[5.75rem]">
+              The world, <span className="text-white/55">made luminous.</span>
+            </h1>
+            <p className="mt-7 max-w-md text-sm leading-relaxed text-white/70 md:text-base">
+              A calm window into global events and cosmic wonders, assembled for a more attentive world.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <a href="#observe" className="group inline-flex items-center gap-3 rounded-full bg-[#a8e8ff] px-5 py-3 text-xs font-medium text-slate-950 shadow-[0_0_30px_rgba(168,232,255,0.24)] transition duration-200 ease-out hover:bg-white active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                Enter the observatory <ArrowUpRight size={15} className="transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </a>
+              <a href="#observe" className="inline-flex items-center gap-2 rounded-full px-3 py-3 text-xs text-white/75 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                <span className="grid h-7 w-7 place-items-center rounded-full border border-white/25 bg-white/10"><Play size={11} fill="currentColor" /></span>
+                Watch the signal
+              </a>
+            </div>
+          </motion.div>
+
+          <motion.div
+            id="observe"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.85, delay: 0.16, ease: "easeOut" }}
+            className="mt-12 flex gap-3 overflow-x-auto pb-2 sm:mt-16 md:max-w-3xl"
+          >
+            {highlights.map((item, index) => (
+              <a key={item.title} href="#lumina-footer" className="liquid-glass group relative h-24 min-w-44 overflow-hidden rounded-2xl border border-[#a8e8ff]/20 bg-white/5 sm:h-28 sm:min-w-52 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                <img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105 group-hover:opacity-85" />
+                <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                <span className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 text-xs text-white">
+                  <span>{item.title}</span><span className="text-[10px] tracking-widest text-[#a8e8ff]/80">0{index + 1}</span>
+                </span>
+              </a>
+            ))}
+          </motion.div>
+        </section>
+
+        <motion.footer
+          id="lumina-footer"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
+          className="liquid-glass w-full rounded-3xl p-6 md:p-10 text-white/70 mt-32 md:mt-64"
+        >
+          <div className="relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-12 mb-10">
+              <div className="md:col-span-5">
+                <div className="flex items-center gap-3 text-white">
+                  <LuminaSvgMark className="h-6 w-6" />
+                  <span className="text-xl font-medium tracking-[-0.02em]">LUMINA</span>
+                </div>
+                <p className="mt-5 max-w-sm text-sm leading-relaxed">
+                  Lumina provides premium clarity on global events and cosmic wonders - shared with all for free.
+                </p>
+              </div>
+
+              <div className="md:col-span-7 grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6">
+                {footerColumns.map((column) => (
+                  <nav key={column.title} aria-label={column.title}>
+                    <h2 className="text-sm uppercase tracking-wider text-white font-medium mb-4">{column.title}</h2>
+                    <ul className="text-xs space-y-2">
+                      {column.links.map((link) => (
+                        <li key={link}>
+                          <a href="#top" className="transition-colors hover:text-white focus-visible:text-white focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white/80">{link}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4">
+              <p className="text-[10px] uppercase tracking-widest opacity-50">Curated by @GotInGeorgiG</p>
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <span className="text-[10px] uppercase tracking-widest opacity-50">Join the Journey:</span>
+                <div className="flex items-center gap-3">
+                  {socialLinks.map(({ label, icon: Icon, href }) => (
+                    <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} className="opacity-70 hover:opacity-100 transition-colors hover:text-white focus-visible:text-white focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-white">
+                      <Icon size={16} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.footer>
+      </div>
+    </main>
   );
 }
