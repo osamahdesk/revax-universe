@@ -35,9 +35,9 @@ const footerColumns = [
 ];
 
 const highlights = [
-  { title: "Orbital stories", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg" },
-  { title: "Weather systems", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg" },
-  { title: "Farther horizons", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg" },
+  { title: "Orbital stories", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg" },
+  { title: "Weather systems", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg" },
+  { title: "Farther horizons", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg" },
 ];
 
 const observationScenes = [
@@ -52,6 +52,43 @@ function sceneImageOpacity(index: number, progress: number) {
   const end = (index + 1) / observationScenes.length;
   const fade = 0.09;
   return Math.max(0, Math.min(1, (progress - (start - fade)) / fade, ((end + fade) - progress) / fade));
+}
+
+function CursorRevealCard({ item, index }: { item: (typeof highlights)[number]; index: number }) {
+  const cardRef = useRef<HTMLAnchorElement>(null);
+  const pending = useRef({ x: 50, y: 50 });
+  const frame = useRef(0);
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLAnchorElement>) => {
+    if (event.pointerType === "touch") return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    pending.current = {
+      x: Math.round(((event.clientX - rect.left) / rect.width) * 100),
+      y: Math.round(((event.clientY - rect.top) / rect.height) * 100),
+    };
+    if (!frame.current) {
+      frame.current = requestAnimationFrame(() => {
+        const card = cardRef.current;
+        if (card) {
+          card.style.setProperty("--cursor-x", `${pending.current.x}%`);
+          card.style.setProperty("--cursor-y", `${pending.current.y}%`);
+        }
+        frame.current = 0;
+      });
+    }
+  };
+
+  useEffect(() => () => { if (frame.current) cancelAnimationFrame(frame.current); }, []);
+
+  return (
+    <a ref={cardRef} href="#lumina-footer" data-cursor="explore" onPointerMove={handlePointerMove} className="cursor-reveal-card liquid-glass group relative h-24 min-w-44 overflow-hidden rounded-2xl border border-[#a8e8ff]/20 bg-white/5 sm:h-28 sm:min-w-52 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white" style={{ "--cursor-x": "50%", "--cursor-y": "50%" } as React.CSSProperties}>
+      <img src={item.image} alt="" className="cursor-reveal-card__image absolute inset-0 h-full w-full object-cover" />
+      <img src={item.revealImage} alt="" className="cursor-reveal-card__reveal absolute inset-0 h-full w-full object-cover" />
+      <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+      <span className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 text-xs text-white"><span>{item.title}</span><span className="text-[10px] tracking-widest text-[#a8e8ff]/80">0{index + 1}</span></span>
+      <span className="cursor-reveal-card__hint">MOVE TO REVEAL</span>
+    </a>
+  );
 }
 
 function ScrollStory({ videoRef }: { videoRef: React.RefObject<HTMLVideoElement | null> }) {
@@ -217,6 +254,24 @@ function LuminaSvgMark({ className = "" }: { className?: string }) {
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadProgress, setLoadProgress] = useState(0);
+  const isReady = videoState === "ready";
+
+  const handleVideoProgress = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget;
+    if (!video.buffered.length || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+    setLoadProgress(Math.min(100, Math.round((bufferedEnd / video.duration) * 100)));
+  };
+
+  const handleVideoReady = (event: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = event.currentTarget;
+    video.pause();
+    video.currentTime = 0;
+    setLoadProgress(100);
+    setVideoState("ready");
+  };
 
   return (
     <main className="relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white">
@@ -225,7 +280,14 @@ export default function Home() {
       <video
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
-        preload="metadata"
+        preload="auto"
+        poster="/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg"
+        onLoadedMetadata={handleVideoProgress}
+        onProgress={handleVideoProgress}
+        onLoadedData={handleVideoReady}
+        onCanPlay={handleVideoReady}
+        onError={() => setVideoState("error")}
+        onWaiting={() => { if (!isReady) setVideoState("loading"); }}
         loop
         muted
         playsInline
@@ -234,11 +296,24 @@ export default function Home() {
         <source src="/manus-storage/lumina-scroll-sequence_860ace3b.webm" type="video/webm" />
         <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" type="video/mp4" />
       </video>
+      <div className={`satellite-loader ${isReady ? "satellite-loader--hidden" : ""}`} role="status" aria-live="polite">
+        <div className="satellite-loader__backdrop" />
+        <div className="satellite-loader__orbit satellite-loader__orbit--one" />
+        <div className="satellite-loader__orbit satellite-loader__orbit--two" />
+        <div className="satellite-loader__signal"><span /><span /><span /></div>
+        <div className="satellite-loader__content">
+          <p className="satellite-loader__eyebrow">LUMINA / ORBITAL LINK</p>
+          <h2>سيتم ربطك بالقمر الصناعي</h2>
+          <p className="satellite-loader__status">{videoState === "error" ? "إعادة محاولة استقبال الإشارة…" : "جارٍ تحميل الإشارة الكونية"}</p>
+          <div className="satellite-loader__progress"><span style={{ width: `${Math.max(8, loadProgress)}%` }} /></div>
+          <span className="satellite-loader__percent">{videoState === "error" ? "—" : `${Math.max(loadProgress, 8)}%`}</span>
+        </div>
+      </div>
       <div className="fixed inset-0 z-[1] bg-[linear-gradient(180deg,rgba(3,8,18,0.38)_0%,rgba(3,8,18,0.15)_44%,rgba(3,8,18,0.78)_100%)]" aria-hidden="true" />
       <div className="fixed inset-0 z-[2] lens-field" aria-hidden="true" />
       <div className="fixed inset-0 z-[3] ambient-grain" aria-hidden="true" />
 
-      <div className="relative z-10 flex min-h-[115vh] w-full max-w-7xl flex-col px-5 pb-5 pt-5 sm:px-8 sm:pb-8 sm:pt-8 lg:px-12 lg:pb-10">
+      <div className={`relative z-10 flex min-h-[115vh] w-full max-w-7xl flex-col px-5 pb-5 pt-5 sm:px-8 sm:pb-8 sm:pt-8 lg:px-12 lg:pb-10 transition-opacity duration-1000 ease-out ${isReady ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
         <header className="flex items-center justify-between text-white">
           <a href="#top" className="group flex items-center gap-3 rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80" aria-label="Lumina home">
             <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-[#a8e8ff]/30 bg-black/20 text-white backdrop-blur-md transition-transform duration-200 ease-out group-hover:scale-105">
@@ -289,15 +364,7 @@ export default function Home() {
             transition={{ duration: 0.85, delay: 0.16, ease: "easeOut" }}
             className="mt-12 flex gap-3 overflow-x-auto pb-2 sm:mt-16 md:max-w-3xl"
           >
-            {highlights.map((item, index) => (
-              <a key={item.title} href="#lumina-footer" data-cursor="explore" className="liquid-glass group relative h-24 min-w-44 overflow-hidden rounded-2xl border border-[#a8e8ff]/20 bg-white/5 sm:h-28 sm:min-w-52 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
-                <img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-65 transition duration-500 group-hover:scale-105 group-hover:opacity-85" />
-                <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-                <span className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-2 text-xs text-white">
-                  <span>{item.title}</span><span className="text-[10px] tracking-widest text-[#a8e8ff]/80">0{index + 1}</span>
-                </span>
-              </a>
-            ))}
+            {highlights.map((item, index) => <CursorRevealCard key={item.title} item={item} index={index} />)}
           </motion.div>
         </section>
 
