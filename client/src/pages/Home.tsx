@@ -327,7 +327,7 @@ export default function Home() {
         playsInline
         aria-hidden="true"
       >
-        <source src="/manus-storage/lumina-scroll-sequence_860ace3b.webm" type="video/webm" />
+        <source src="/manus-storage/lumina-scroll-sequence-4k_d765b587.webm" type="video/webm" />
         <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" type="video/mp4" />
       </video>
       <div className={`satellite-loader ${isReady ? "satellite-loader--hidden" : ""}`} role="status" aria-live="polite">
