@@ -300,6 +300,10 @@ function SceneRail({ onSelect }: { onSelect: (index: number) => void }) {
   return <nav className="scene-rail" aria-label="Observation scenes"><span className="scene-rail__line" /><span className="scene-rail__label">SIGNAL INDEX</span>{observationScenes.map((scene, index) => <button key={scene.index} type="button" data-cursor="explore" className={`scene-rail__item ${active === index ? "is-active" : ""}`} onClick={() => onSelect(index)} aria-label={`Open scene ${scene.index}`}><span>{scene.index}</span><em>{scene.kicker.split(" / ")[0]}</em></button>)}</nav>;
 }
 
+function ArchiveModal({ scene, onClose, onJump }: { scene: (typeof observationScenes)[number]; onClose: () => void; onJump: () => void }) {
+  return <div className="archive-modal__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="archive-modal liquid-glass" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title"><div className="archive-modal__image" style={{ backgroundImage: `url(${scene.image})` }} /><div className="archive-modal__wash" /><div className="archive-modal__top"><span>REVAX / SIGNAL ARCHIVE</span><button type="button" onClick={onClose} aria-label="Close signal details">×</button></div><div className="archive-modal__body"><span className="archive-modal__index">{scene.index} / 05</span><p className="archive-modal__kicker">{scene.kicker}</p><h2 id="archive-modal-title">{scene.title}</h2><p className="archive-modal__description">{scene.body}</p><div className="archive-modal__telemetry"><span><small>FREQUENCY</small><strong>{scene.note}</strong></span><span><small>FIELD STATE</small><strong>OBSERVING</strong></span><span><small>FRAME</small><strong>01.00</strong></span></div><div className="archive-modal__visual"><span className="archive-modal__orbit" /><span className="archive-modal__crosshair" /><span className="archive-modal__signal-bars"><i /><i /><i /><i /><i /><i /></span></div><button type="button" className="archive-modal__action" data-cursor="open" onClick={() => { onJump(); onClose(); }}>Open in sequence <ArrowUpRight size={15} /></button></div><div className="archive-modal__footer"><span>© REVAX UNIVERSE</span><span>ESC TO CLOSE</span></div></section></div>;
+}
+
 function CommandCenter({ open, onClose, onJump }: { open: boolean; onClose: () => void; onJump: (index: number) => void }) {
   const [query, setQuery] = useState("");
   useEffect(() => { if (!open) setQuery(""); }, [open]);
@@ -328,6 +332,10 @@ export default function Home() {
   const [networkNotice, setNetworkNotice] = useState<"weak" | "offline" | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [accessibilityMode, setAccessibilityMode] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [selectedArchive, setSelectedArchive] = useState<(typeof observationScenes)[number] | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const previousSceneRef = useRef(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
@@ -340,9 +348,32 @@ export default function Home() {
   const isReady = videoState === "ready";
   const loaderPercent = Math.max(8, loadProgress);
   const loaderStage = videoState === "error" ? "SIGNAL RETRY" : loaderPercent < 34 ? "CALIBRATING LENS" : loaderPercent < 78 ? "LOCKING SATELLITE" : "SIGNAL READY";
+  const playSynth = (kind: "open" | "whoosh") => {
+    if (!soundEnabled) return;
+    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audio = audioContextRef.current ?? new AudioContextClass();
+    audioContextRef.current = audio;
+    if (audio.state === "suspended") void audio.resume();
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    const now = audio.currentTime;
+    oscillator.type = kind === "open" ? "sine" : "triangle";
+    oscillator.frequency.setValueAtTime(kind === "open" ? 280 : 120, now);
+    oscillator.frequency.exponentialRampToValueAtTime(kind === "open" ? 760 : 52, now + (kind === "open" ? .22 : .34));
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(kind === "open" ? .045 : .028, now + .025);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + (kind === "open" ? .25 : .38));
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + (kind === "open" ? .26 : .4));
+  };
+  const toggleSound = () => { setSoundEnabled((value) => { const next = !value; if (next) { const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext; if (AudioContextClass && !audioContextRef.current) audioContextRef.current = new AudioContextClass(); } return next; }); };
+  const openCommandCenter = () => { setCommandOpen(true); window.setTimeout(() => playSynth("open"), 0); };
   const jumpToScene = (index: number) => {
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     window.scrollTo({ top: maxScroll * (index / observationScenes.length), behavior: motionEnabled ? "smooth" : "auto" });
+    playSynth("whoosh");
   };
 
   useEffect(() => {
@@ -366,9 +397,19 @@ export default function Home() {
   }, [videoState, deviceProfile]);
 
   useEffect(() => {
+    const onScrollSound = () => {
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const scene = Math.min(observationScenes.length - 1, Math.floor((window.scrollY / maxScroll) * observationScenes.length));
+      if (scene !== previousSceneRef.current) { previousSceneRef.current = scene; playSynth("whoosh"); }
+    };
+    window.addEventListener("scroll", onScrollSound, { passive: true });
+    return () => window.removeEventListener("scroll", onScrollSound);
+  }, [soundEnabled]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "/" && !["INPUT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); setCommandOpen(true); }
-      if (event.key === "Escape") setCommandOpen(false);
+      if (event.key === "Escape") { setCommandOpen(false); setSelectedArchive(null); }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -414,8 +455,10 @@ export default function Home() {
       <ContextCursor />
       <ScrollCue />
       <SceneRail onSelect={jumpToScene} />
-      <button type="button" data-cursor="open" className="command-trigger liquid-glass" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><span>⌘ /</span> Explore</button>
+      <button type="button" data-cursor="open" className="command-trigger liquid-glass" onClick={openCommandCenter} aria-label="Open Command Center"><span>⌘ /</span> Explore</button>
+      <button type="button" data-cursor="open" className="sound-toggle liquid-glass" onClick={toggleSound} aria-pressed={soundEnabled}><span className="sound-toggle__pulse" /> {soundEnabled ? "Sound on" : "Sound off"}</button>
       <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} onJump={jumpToScene} />
+      {selectedArchive && <ArchiveModal scene={selectedArchive} onClose={() => setSelectedArchive(null)} onJump={() => jumpToScene(observationScenes.findIndex((item) => item.index === selectedArchive.index))} />}
       <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button><button type="button" data-cursor="open" className="accessibility-toggle liquid-glass" onClick={() => setAccessibilityMode((value) => !value)} aria-pressed={accessibilityMode}>A11y {accessibilityMode ? "on" : "off"}</button>
       <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
       {networkNotice && <div className={`network-notice network-notice--${networkNotice}`} role="status" aria-live="polite"><span className="network-notice__signal" /><div><strong>{networkNotice === "offline" ? "Signal interrupted" : "Connection reduced"}</strong><small>{networkNotice === "offline" ? "Waiting for the network to return." : `REVAX switched to ${deviceProfile.name} for a smoother view.`}</small></div><button type="button" onClick={() => setNetworkNotice(null)} aria-label="Dismiss connection notice">×</button></div>}
@@ -521,7 +564,7 @@ export default function Home() {
 
         <ScrollStory videoRef={videoRef} motionEnabled={motionEnabled} />
 
-        <section id="signal-archive" className="signal-archive" aria-labelledby="archive-title"><div className="signal-archive__header"><div><p className="signal-archive__eyebrow">REVAX / SIGNAL ARCHIVE</p><h2 id="archive-title">Keep the signal.</h2></div><p>A living index of observations, traces, and quiet phenomena. Choose a frequency and return to the scene.</p></div><div className="signal-archive__grid">{observationScenes.slice(0, 4).map((scene, index) => <button type="button" data-cursor="explore" key={scene.index} onClick={() => jumpToScene(index)} className="archive-card"><span className="archive-card__index">{scene.index}</span><span className="archive-card__image" style={{ backgroundImage: `url(${scene.image})` }} /><span className="archive-card__content"><small>{scene.kicker}</small><strong>{scene.title}</strong><em>{scene.note}</em></span><ArrowUpRight size={15} /></button>)}</div></section>
+        <section id="signal-archive" className="signal-archive" aria-labelledby="archive-title"><div className="signal-archive__header"><div><p className="signal-archive__eyebrow">REVAX / SIGNAL ARCHIVE</p><h2 id="archive-title">Keep the signal.</h2></div><p>A living index of observations, traces, and quiet phenomena. Choose a frequency and return to the scene.</p></div><div className="signal-archive__grid">{observationScenes.slice(0, 4).map((scene, index) => <button type="button" data-cursor="explore" key={scene.index} onClick={() => setSelectedArchive(scene)} className="archive-card"><span className="archive-card__index">{scene.index}</span><span className="archive-card__image" style={{ backgroundImage: `url(${scene.image})` }} /><span className="archive-card__content"><small>{scene.kicker}</small><strong>{scene.title}</strong><em>{scene.note}</em></span><ArrowUpRight size={15} /></button>)}</div></section>
 
         <motion.footer
           id="lumina-footer"
