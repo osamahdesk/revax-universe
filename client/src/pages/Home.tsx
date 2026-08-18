@@ -321,6 +321,47 @@ function CommandCenter({ open, onClose, onJump }: { open: boolean; onClose: () =
   return <div className="command-center__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="command-center liquid-glass" role="dialog" aria-modal="true" aria-labelledby="command-center-title"><div className="command-center__top"><span>REVAX / COMMAND CENTER</span><button type="button" onClick={onClose} aria-label="Close command center">×</button></div><h2 id="command-center-title">Find a signal.</h2><p>Jump directly into an observation, study, or atmospheric trace.</p><label className="command-center__input"><span>/</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the archive" /></label><div className="command-center__results">{matches.length ? matches.map(({ scene, index }) => <button type="button" key={scene.index} data-cursor="open" onClick={() => { onJump(index); onClose(); }}><span className="command-center__index">{scene.index}</span><span><strong>{scene.title}</strong><small>{scene.kicker} · {scene.note}</small></span><ArrowUpRight size={15} /></button>) : <span className="command-center__empty">No signal matched that query.</span>}</div><div className="command-center__hint"><span>ENTER TO OPEN</span><span>ESC TO CLOSE</span></div></section></div>;
 }
 
+type AmbientPlayer = { playVideo: () => void; pauseVideo: () => void; setVolume: (volume: number) => void; };
+type AmbientYouTube = { Player: new (target: HTMLElement, options: { videoId: string; playerVars: Record<string, number | string>; events: { onReady: (event: { target: AmbientPlayer }) => void; onStateChange: (event: { data: number }) => void; }; }) => AmbientPlayer; };
+
+function AmbientAudio() {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<AmbientPlayer | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [needsGesture, setNeedsGesture] = useState(false);
+
+  useEffect(() => {
+    let disposed = false;
+    const createPlayer = () => {
+      if (disposed || !mountRef.current || playerRef.current) return;
+      const youtube = (window as Window & { YT?: AmbientYouTube }).YT;
+      if (!youtube) return;
+      playerRef.current = new youtube.Player(mountRef.current, {
+        videoId: "joJtbRdupBg",
+        playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: "joJtbRdupBg", playsinline: 1, rel: 0, modestbranding: 1 },
+        events: {
+          onReady: ({ target }) => { target.setVolume(50); target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
+          onStateChange: ({ data }) => { if (data === 1) { setEnabled(true); setNeedsGesture(false); } },
+        },
+      });
+    };
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://www.youtube.com/iframe_api"]');
+    if (existing) { const timer = window.setInterval(() => { if ((window as Window & { YT?: AmbientYouTube }).YT) { window.clearInterval(timer); createPlayer(); } }, 80); return () => { disposed = true; window.clearInterval(timer); }; }
+    const previousReady = (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady;
+    (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = () => { previousReady?.(); createPlayer(); };
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    script.async = true;
+    document.head.appendChild(script);
+    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { player.setVolume(50); player.playVideo(); setEnabled(true); setNeedsGesture(false); } };
+    window.addEventListener("pointerdown", startOnFirstInteraction, { once: true, passive: true });
+    return () => { disposed = true; window.removeEventListener("pointerdown", startOnFirstInteraction); const current = (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady; if (current) (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = previousReady; };
+  }, []);
+
+  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(50); player.playVideo(); setEnabled(true); setNeedsGesture(false); };
+  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-live="polite"><span className="ambient-audio__pulse" /><span>{enabled ? "AMBIENT / 50%" : "AMBIENT AUDIO"}</span>{needsGesture && <button type="button" onClick={enableAudio}>{"Enable"}</button>}</div></>;
+}
+
 function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -426,6 +467,7 @@ export default function Home() {
 
   return (
     <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""}`}>
+      <AmbientAudio />
       <ContextCursor />
       <ScrollCue />
       <SceneRail onSelect={jumpToScene} />
