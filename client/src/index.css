@@ -573,3 +573,17 @@
 @keyframes final-orbit-drift { from { transform: rotate(-22deg) scale(1) translate3d(-1%, 1%, 0); } to { transform: rotate(-16deg) scale(1.06) translate3d(1%, -1%, 0); } }
 @media (max-width: 700px) { .end-signal__orbit { width: 88vw; height: 34vw; } .end-signal__orbit--two { width: 70vw; height: 62vw; } .end-signal__orbit--three { width: 52vw; height: 96vw; } .end-signal__core .revax-mark { width: 4rem; height: 4rem; } .end-signal > p { bottom: 17%; } }
 @media (prefers-reduced-motion: reduce) { .end-signal.is-visible .end-signal__orbit { animation: none; } }
+
+/* Final REVAX mark interaction: orbital response on hover and keyboard focus. */
+.end-signal__core { isolation: isolate; padding: 1.4rem 2rem; border: 1px solid transparent; border-radius: 50%; outline: none; cursor: crosshair; transition: transform 420ms cubic-bezier(.23,1,.32,1), border-color 320ms ease, background 320ms ease, filter 320ms ease; }
+.end-signal__core::before, .end-signal__core::after { content: ""; position: absolute; z-index: -1; border: 1px solid rgba(168,232,255,.18); border-radius: 50%; opacity: 0; transform: scale(.72) rotate(0deg); transition: opacity 420ms ease, transform 650ms cubic-bezier(.23,1,.32,1); }
+.end-signal__core::before { inset: .15rem -.9rem; }
+.end-signal__core::after { inset: -.9rem .15rem; border-color: rgba(141,244,208,.18); }
+.end-signal__core:hover, .end-signal__core:focus-visible { transform: scale(1.08); border-color: rgba(168,232,255,.42); background: radial-gradient(circle, rgba(168,232,255,.12), transparent 68%); filter: drop-shadow(0 0 28px rgba(168,232,255,.5)); }
+.end-signal__core:hover::before, .end-signal__core:focus-visible::before { opacity: 1; transform: scale(1) rotate(22deg); }
+.end-signal__core:hover::after, .end-signal__core:focus-visible::after { opacity: 1; transform: scale(1) rotate(-35deg); }
+.end-signal__core:hover .revax-mark, .end-signal__core:focus-visible .revax-mark { transform: rotate(18deg) scale(1.18); filter: drop-shadow(0 0 18px rgba(168,232,255,.85)); }
+.end-signal__core:hover .revax-mark__orbit--one, .end-signal__core:focus-visible .revax-mark__orbit--one { animation-duration: 1.4s; }
+.end-signal__core:hover .revax-mark__orbit--two, .end-signal__core:focus-visible .revax-mark__orbit--two { animation-duration: 1.9s; }
+.end-signal__core .revax-mark { transition: transform 420ms cubic-bezier(.23,1,.32,1), filter 320ms ease; }
+@media (prefers-reduced-motion: reduce) { .end-signal__core:hover, .end-signal__core:focus-visible { transform: none; } .end-signal__core::before, .end-signal__core::after { transition: opacity 180ms ease; transform: none; } .end-signal__core:hover .revax-mark, .end-signal__core:focus-visible .revax-mark { transform: none; } }
