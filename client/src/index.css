@@ -545,3 +545,31 @@
 @keyframes future-notice-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 700px) { .future-orbit { top: 9rem; right: .4rem; width: 5rem; height: 5rem; opacity: .42; } .future-timeline { top: 8.8rem; width: calc(100vw - 1.5rem); justify-content: space-between; } .future-timeline button { min-width: 2.2rem; } .future-timeline em { display: none; } .coordinate-hud { bottom: 4.25rem; left: .75rem; min-width: 10rem; } .observatory-toggle { right: .75rem; bottom: 1rem; } .future-system-notice { top: 11.2rem; } }
 @media (prefers-reduced-motion: reduce) { .future-orbit { transform: none; } .future-system-notice span { animation: none; } }
+
+/* Network-aware coordinates and final orbital convergence. */
+.accessibility-toggle { opacity: .42; color: rgba(235,250,255,.42); border-color: rgba(168,232,255,.14); box-shadow: none; }
+.accessibility-toggle[aria-pressed="true"] { opacity: .92; color: #dff8ff; border-color: rgba(168,232,255,.5); background: rgba(168,232,255,.1); }
+.coordinate-hud { transition: color .5s ease, border-color .5s ease, box-shadow .5s ease, background .5s ease; }
+.coordinate-hud--excellent { color: rgba(141,244,208,.72); border-color: rgba(141,244,208,.34); box-shadow: 0 16px 50px rgba(35,190,145,.12), inset 0 0 30px rgba(141,244,208,.04); }
+.coordinate-hud--excellent strong { color: #a8f8dd; }
+.coordinate-hud--fair { color: rgba(244,201,109,.76); border-color: rgba(244,201,109,.34); box-shadow: 0 16px 50px rgba(244,201,109,.1), inset 0 0 30px rgba(244,201,109,.035); }
+.coordinate-hud--fair strong { color: #ffe3a3; }
+.coordinate-hud--weak { color: rgba(255,130,152,.78); border-color: rgba(255,130,152,.38); box-shadow: 0 16px 50px rgba(255,130,152,.1), inset 0 0 30px rgba(255,130,152,.035); }
+.coordinate-hud--weak strong { color: #ffb0bf; }
+.coordinate-hud--unknown { color: rgba(168,232,255,.62); border-color: rgba(168,232,255,.22); }
+.end-signal { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at center, rgba(4,17,31,.9), rgba(2,7,16,.58) 42%, transparent 76%); opacity: 0; pointer-events: none; transition: opacity 900ms cubic-bezier(.23,1,.32,1); }
+.end-signal.is-visible { opacity: 1; }
+.end-signal__orbit { position: absolute; width: min(54vw, 42rem); height: min(18vw, 14rem); border: 1px solid rgba(168,232,255,.34); border-radius: 50%; transform: rotate(-22deg) scale(1.3); transition: transform 1.2s cubic-bezier(.23,1,.32,1), opacity 1s ease; opacity: 0; }
+.end-signal__orbit--two { width: min(42vw, 32rem); height: min(32vw, 24rem); transform: rotate(54deg) scale(1.5); border-color: rgba(141,244,208,.28); }
+.end-signal__orbit--three { width: min(30vw, 23rem); height: min(50vw, 36rem); transform: rotate(78deg) scale(1.4); border-color: rgba(187,167,255,.26); }
+.end-signal.is-visible .end-signal__orbit { opacity: 1; transform: rotate(-22deg) scale(1); animation: final-orbit-drift 7s ease-in-out infinite alternate; }
+.end-signal.is-visible .end-signal__orbit--two { transform: rotate(54deg) scale(1); animation-duration: 9s; animation-direction: alternate-reverse; }
+.end-signal.is-visible .end-signal__orbit--three { transform: rotate(78deg) scale(1); animation-duration: 11s; }
+.end-signal__core { position: relative; z-index: 2; display: grid; justify-items: center; gap: .5rem; color: #dff8ff; text-align: center; filter: drop-shadow(0 0 24px rgba(168,232,255,.34)); }
+.end-signal__core .revax-mark { width: 4.8rem; height: 4.8rem; transform: scale(1.2); }
+.end-signal__core > span { font: 500 1rem/1 Orbitron, sans-serif; letter-spacing: .42em; }
+.end-signal__core small, .end-signal > p { color: rgba(220,247,255,.5); font: 600 .5rem/1 Orbitron, sans-serif; letter-spacing: .22em; }
+.end-signal > p { position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); color: rgba(220,247,255,.68); }
+@keyframes final-orbit-drift { from { transform: rotate(-22deg) scale(1) translate3d(-1%, 1%, 0); } to { transform: rotate(-16deg) scale(1.06) translate3d(1%, -1%, 0); } }
+@media (max-width: 700px) { .end-signal__orbit { width: 88vw; height: 34vw; } .end-signal__orbit--two { width: 70vw; height: 62vw; } .end-signal__orbit--three { width: 52vw; height: 96vw; } .end-signal__core .revax-mark { width: 4rem; height: 4rem; } .end-signal > p { bottom: 17%; } }
+@media (prefers-reduced-motion: reduce) { .end-signal.is-visible .end-signal__orbit { animation: none; } }
