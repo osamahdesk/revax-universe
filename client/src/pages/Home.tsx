@@ -1,6 +1,6 @@
 /* Lumina — مرصد الضوء السائل: الفيديو هو المشهد، والعناصر التحريرية زجاجية ودقيقة. */
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
   Facebook,
@@ -298,6 +298,14 @@ function LuminaSvgMark({ className = "" }: { className?: string }) {
 }
 
 export default function Home() {
+  const deviceProfile = useMemo(() => {
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    const compact = window.matchMedia("(max-width: 767px)").matches;
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+    const constrained = compact || Boolean(connection?.saveData) || deviceMemory <= 4 || navigator.hardwareConcurrency <= 4;
+    return { name: constrained ? (compact ? "MOBILE / EFFICIENT" : "DESKTOP / CONSERVED") : "DESKTOP / HIGH FIDELITY", constrained, minSpeed: constrained ? 2 : 5, source: constrained ? "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" : "/manus-storage/lumina-scroll-sequence-4k_d765b587.webm", type: constrained ? "video/mp4" : "video/webm" };
+  }, []);
+  const [networkNotice, setNetworkNotice] = useState<"weak" | "offline" | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
@@ -322,14 +330,25 @@ export default function Home() {
       const speedValue = resource?.decodedBodySize && resource.duration > 0 ? resource.decodedBodySize * 8 / resource.duration / 1000 : connection?.downlink ?? 0;
       const latencyValue = resource?.responseStart ? Math.round(resource.responseStart) : 0;
       const speed = speedValue ? `${speedValue.toFixed(1)} Mbps` : "—";
-      const quality: NetworkQuality = !navigator.onLine || videoState === "error" ? "weak" : speedValue >= 5 && video.readyState >= 3 ? "excellent" : speedValue >= 1 ? "fair" : "unknown";
+      const quality: NetworkQuality = !navigator.onLine || videoState === "error" ? "weak" : speedValue >= deviceProfile.minSpeed && video.readyState >= 3 ? "excellent" : speedValue >= deviceProfile.minSpeed / 2 ? "fair" : "unknown";
       setTelemetry({ buffered, speed, speedValue, ready: `${video.readyState}/4`, edge: videoState === "error" ? "OFFLINE" : videoState === "ready" ? "ONLINE" : "CONNECTING", link: connection?.effectiveType?.toUpperCase() ?? "—", latency: latencyValue ? `${latencyValue} ms` : "—", quality });
       setTelemetryHistory((previous) => ({ buffer: [...previous.buffer, buffered].slice(-24), speed: [...previous.speed, speedValue].slice(-24), latency: [...previous.latency, latencyValue].slice(-24) }));
       timer = window.setTimeout(measure, 700);
     };
     measure();
     return () => window.clearTimeout(timer);
-  }, [videoState]);
+  }, [videoState, deviceProfile]);
+
+  useEffect(() => {
+    const connection = (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number } }).connection;
+    const quality = telemetry.quality;
+    if (quality === "weak" && navigator.onLine) setNetworkNotice("weak");
+    else if (!navigator.onLine) setNetworkNotice("offline");
+    else setNetworkNotice(null);
+    if (quality !== "weak" && navigator.onLine) return;
+    const timer = window.setTimeout(() => setNetworkNotice(null), 5200);
+    return () => window.clearTimeout(timer);
+  }, [telemetry.quality]);
 
   useEffect(() => {
     if (!legalOpen) return;
@@ -362,6 +381,7 @@ export default function Home() {
       <ScrollCue />
       <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button>
       <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
+      {networkNotice && <div className={`network-notice network-notice--${networkNotice}`} role="status" aria-live="polite"><span className="network-notice__signal" /><div><strong>{networkNotice === "offline" ? "Signal interrupted" : "Connection reduced"}</strong><small>{networkNotice === "offline" ? "Waiting for the network to return." : `REVAX switched to ${deviceProfile.name} for a smoother view.`}</small></div><button type="button" onClick={() => setNetworkNotice(null)} aria-label="Dismiss connection notice">×</button></div>}
       {telemetryOpen && <aside className={`telemetry-panel telemetry-panel--${telemetry.quality} liquid-glass`} aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className={`telemetry-quality telemetry-quality--${telemetry.quality}`}><span className="telemetry-quality__dot" /><strong>{telemetry.quality === "excellent" ? "Excellent connection" : telemetry.quality === "fair" ? "Stable connection" : telemetry.quality === "weak" ? "Weak connection" : "Measuring connection"}</strong><small>{telemetry.quality === "excellent" ? "High bandwidth / ready for 4K" : telemetry.quality === "fair" ? "Moderate bandwidth / adaptive" : telemetry.quality === "weak" ? "Low bandwidth / conserve motion" : "Waiting for live samples"}</small></div><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong><Sparkline values={telemetryHistory.buffer} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "cyan"} /></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong><span className="telemetry-meter"><span style={{ width: `${(Number(telemetry.ready.split("/")[0]) / 4) * 100}%` }} /></span></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong><Sparkline values={telemetryHistory.speed} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "violet"} /></div><div><small>NETWORK</small><strong>{telemetry.link}</strong><span className="telemetry-bars"><i /><i /><i /><i /><i /></span></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong><Sparkline values={telemetryHistory.latency} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "white"} /></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong><span className={`telemetry-live-dot ${telemetry.edge === "ONLINE" ? "is-online" : ""}`} /></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
       <video
         ref={videoRef}
@@ -379,8 +399,8 @@ export default function Home() {
         playsInline
         aria-hidden="true"
       >
-        <source src="/manus-storage/lumina-scroll-sequence-4k_d765b587.webm" type="video/webm" />
-        <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" type="video/mp4" />
+        <source src={deviceProfile.source} type={deviceProfile.type} />
+        <source src={deviceProfile.constrained ? "/manus-storage/lumina-scroll-sequence-4k_d765b587.webm" : "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4"} type={deviceProfile.constrained ? "video/webm" : "video/mp4"} />
       </video>
       <div className={`satellite-loader ${isReady ? "satellite-loader--hidden" : ""}`} role="status" aria-live="polite">
         <div className="satellite-loader__backdrop" />
