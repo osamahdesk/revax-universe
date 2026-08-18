@@ -45,4 +45,5 @@
 | [x] | تطوير Zero-Gravity Cards للبطاقات المدارية. |
 | [x] | تطوير Final Constellation من نقاط المشاهد الخمسة. |
 | [x] | تطوير Invisible Navigation للنقاط المدارية. |
-| [x] | استثناء أنماط Calm وDeep وSignal حسب طلب المستخدم.
+| [x] | استثناء أنماط Calm وDeep وSignal حسب طلب المستخدم. |
+| [ ] | إنشاء مستودع GitHub خاص باسم revax-universe ورفع النسخة الحالية.
