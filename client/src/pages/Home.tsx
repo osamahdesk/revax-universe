@@ -11,6 +11,8 @@ import {
   Play,
   Twitter,
   Youtube,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 
 type NetworkQuality = "excellent" | "fair" | "weak" | "unknown";
@@ -128,10 +130,12 @@ function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HT
   useEffect(() => {
     let frame = 0;
     let lastTime = performance.now();
+    let maxScroll = 1;
+    let lastProgressRenderAt = 0;
 
     const readTarget = () => {
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      // Use the whole page as the timeline so the first downward gesture starts frame 0 immediately.
+      maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      // Use a stable page height during a gesture to avoid progress jitter while assets settle.
       targetProgress.current = Math.max(0, Math.min(1, window.scrollY / maxScroll));
     };
 
@@ -142,9 +146,9 @@ function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HT
       // Seeking a compressed video on every scroll event causes decoder contention. Cap seeks to 30fps.
       if (now - lastVideoSyncAt.current < 33) return;
       const nextTime = displayProgress * video.duration;
-      if (Math.abs(nextTime - lastVideoTime.current) > 0.028) {
+      if (Math.abs(nextTime - lastVideoTime.current) > 0.045) {
         if (!video.paused) video.pause();
-        video.currentTime = nextTime;
+        if (typeof video.fastSeek === "function") video.fastSeek(nextTime); else video.currentTime = nextTime;
         lastVideoTime.current = nextTime;
         lastVideoSyncAt.current = now;
       }
@@ -157,8 +161,9 @@ function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HT
       const smoothing = reducedMotion ? 1 : 1 - Math.exp(-dt * 11);
       smoothedProgress.current += (targetProgress.current - smoothedProgress.current) * smoothing;
       const displayProgress = smoothedProgress.current;
-      if (Math.abs(displayProgress - renderedProgress.current) > 0.0012) {
+      if ((now - lastProgressRenderAt > 34 || Math.abs(targetProgress.current - displayProgress) < 0.00035) && Math.abs(displayProgress - renderedProgress.current) > 0.0025) {
         renderedProgress.current = displayProgress;
+        lastProgressRenderAt = now;
         setProgress(displayProgress);
       }
       syncVideo(displayProgress, now);
@@ -321,16 +326,18 @@ function CommandCenter({ open, onClose, onJump }: { open: boolean; onClose: () =
   return <div className="command-center__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="command-center liquid-glass" role="dialog" aria-modal="true" aria-labelledby="command-center-title"><div className="command-center__top"><span>REVAX / COMMAND CENTER</span><button type="button" onClick={onClose} aria-label="Close command center">×</button></div><h2 id="command-center-title">Find a signal.</h2><p>Jump directly into an observation, study, or atmospheric trace.</p><label className="command-center__input"><span>/</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the archive" /></label><div className="command-center__results">{matches.length ? matches.map(({ scene, index }) => <button type="button" key={scene.index} data-cursor="open" onClick={() => { onJump(index); onClose(); }}><span className="command-center__index">{scene.index}</span><span><strong>{scene.title}</strong><small>{scene.kicker} · {scene.note}</small></span><ArrowUpRight size={15} /></button>) : <span className="command-center__empty">No signal matched that query.</span>}</div><div className="command-center__hint"><span>ENTER TO OPEN</span><span>ESC TO CLOSE</span></div></section></div>;
 }
 
-type AmbientPlayer = { playVideo: () => void; pauseVideo: () => void; setVolume: (volume: number) => void; };
+type AmbientPlayer = { playVideo: () => void; pauseVideo: () => void; setVolume: (volume: number) => void; mute: () => void; unMute: () => void; };
 type AmbientYouTube = { Player: new (target: HTMLElement, options: { videoId: string; playerVars: Record<string, number | string>; events: { onReady: (event: { target: AmbientPlayer }) => void; onStateChange: (event: { data: number }) => void; }; }) => AmbientPlayer; };
 
 function AmbientAudio() {
   const mountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<AmbientPlayer | null>(null);
   const [volume, setVolume] = useState(() => { try { const raw = window.localStorage.getItem("revax-ambient-volume"); if (raw === null) return 50; const stored = Number(raw); return Number.isFinite(stored) ? Math.min(100, Math.max(20, stored)) : 50; } catch { return 50; } });
+  const [muted, setMuted] = useState(() => { try { return window.localStorage.getItem("revax-ambient-muted") === "true"; } catch { return false; } });
   const [needsGesture, setNeedsGesture] = useState(false);
   const volumeRef = useRef(volume);
-  useEffect(() => { volumeRef.current = volume; }, [volume]);
+  const mutedRef = useRef(muted);
+  useEffect(() => { volumeRef.current = volume; mutedRef.current = muted; }, [volume, muted]);
 
   useEffect(() => {
     let disposed = false;
@@ -342,7 +349,7 @@ function AmbientAudio() {
         videoId: "joJtbRdupBg",
         playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: "joJtbRdupBg", playsinline: 1, rel: 0, modestbranding: 1 },
         events: {
-          onReady: ({ target }) => { target.setVolume(volumeRef.current); target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
+          onReady: ({ target }) => { target.setVolume(volumeRef.current); if (mutedRef.current) target.mute(); else target.unMute(); target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
           onStateChange: ({ data }) => { if (data === 1) setNeedsGesture(false); },
         },
       });
@@ -355,15 +362,16 @@ function AmbientAudio() {
     script.src = "https://www.youtube.com/iframe_api";
     script.async = true;
     document.head.appendChild(script);
-    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { player.setVolume(volumeRef.current); player.playVideo(); setNeedsGesture(false); } };
+    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { player.setVolume(volumeRef.current); if (mutedRef.current) player.mute(); else player.unMute(); player.playVideo(); setNeedsGesture(false); } };
     window.addEventListener("pointerdown", startOnFirstInteraction, { once: true, passive: true });
     return () => { disposed = true; window.removeEventListener("pointerdown", startOnFirstInteraction); const current = (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady; if (current) (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = previousReady; };
   }, []);
 
-  useEffect(() => { try { window.localStorage.setItem("revax-ambient-volume", String(volume)); } catch { /* storage may be unavailable */ } }, [volume]);
+  useEffect(() => { try { window.localStorage.setItem("revax-ambient-volume", String(volume)); window.localStorage.setItem("revax-ambient-muted", String(muted)); } catch { /* storage may be unavailable */ } }, [volume, muted]);
   const changeVolume = (next: number) => { const safeVolume = Math.min(100, Math.max(20, next)); setVolume(safeVolume); playerRef.current?.setVolume(safeVolume); };
-  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(volume); player.playVideo(); setNeedsGesture(false); };
-  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-label="Ambient music volume control"><span className="ambient-audio__icon" aria-hidden="true">◉</span><span className="ambient-audio__pulse" /><label className="ambient-audio__volume"><span>VOL</span><input type="range" min="20" max="100" step="1" value={Math.max(20, volume)} onChange={(event) => changeVolume(Number(event.target.value))} aria-label={`Ambient music volume ${volume}%`} /><output>{volume}%</output></label>{needsGesture && <button type="button" className="ambient-audio__enable" onClick={enableAudio}>Enable</button>}</div></>;
+  const toggleMute = () => { const player = playerRef.current; const next = !muted; if (player) { if (next) player.mute(); else { player.unMute(); player.setVolume(volume); } } setMuted(next); };
+  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(volume); if (muted) player.mute(); else player.unMute(); player.playVideo(); setNeedsGesture(false); };
+  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-label="Ambient music controls"><button type="button" className="ambient-audio__mute" onClick={toggleMute} aria-pressed={muted} aria-label={muted ? "Unmute ambient music" : "Mute ambient music"}>{muted ? <VolumeX size={14} /> : <Volume2 size={14} />}</button><span className="ambient-audio__pulse" /><label className="ambient-audio__volume"><span>VOL</span><input type="range" min="20" max="100" step="1" value={Math.max(20, volume)} onChange={(event) => changeVolume(Number(event.target.value))} aria-label={`Ambient music volume ${volume}%`} /><output>{volume}%</output></label>{needsGesture && <button type="button" className="ambient-audio__enable" onClick={enableAudio}>Enable</button>}</div></>;
 }
 
 function LuminaSvgMark({ className = "" }: { className?: string }) {
