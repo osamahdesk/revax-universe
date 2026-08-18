@@ -289,6 +289,26 @@ function Sparkline({ values, tone = "cyan" }: { values: number[]; tone?: "cyan" 
   return <svg className={`telemetry-sparkline telemetry-sparkline--${tone}`} viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Live metric trend"><polyline points={points} fill="none" vectorEffect="non-scaling-stroke" /></svg>;
 }
 
+function SceneRail({ onSelect }: { onSelect: (index: number) => void }) {
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    const update = () => { const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); setActive(Math.min(observationScenes.length - 1, Math.floor((window.scrollY / maxScroll) * observationScenes.length))); };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
+  return <nav className="scene-rail" aria-label="Observation scenes"><span className="scene-rail__line" /><span className="scene-rail__label">SIGNAL INDEX</span>{observationScenes.map((scene, index) => <button key={scene.index} type="button" data-cursor="explore" className={`scene-rail__item ${active === index ? "is-active" : ""}`} onClick={() => onSelect(index)} aria-label={`Open scene ${scene.index}`}><span>{scene.index}</span><em>{scene.kicker.split(" / ")[0]}</em></button>)}</nav>;
+}
+
+function CommandCenter({ open, onClose, onJump }: { open: boolean; onClose: () => void; onJump: (index: number) => void }) {
+  const [query, setQuery] = useState("");
+  useEffect(() => { if (!open) setQuery(""); }, [open]);
+  if (!open) return null;
+  const term = query.toLowerCase().trim();
+  const matches = observationScenes.map((scene, index) => ({ scene, index })).filter(({ scene }) => `${scene.kicker} ${scene.title} ${scene.note}`.toLowerCase().includes(term));
+  return <div className="command-center__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="command-center liquid-glass" role="dialog" aria-modal="true" aria-labelledby="command-center-title"><div className="command-center__top"><span>REVAX / COMMAND CENTER</span><button type="button" onClick={onClose} aria-label="Close command center">×</button></div><h2 id="command-center-title">Find a signal.</h2><p>Jump directly into an observation, study, or atmospheric trace.</p><label className="command-center__input"><span>/</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the archive" /></label><div className="command-center__results">{matches.length ? matches.map(({ scene, index }) => <button type="button" key={scene.index} data-cursor="open" onClick={() => { onJump(index); onClose(); }}><span className="command-center__index">{scene.index}</span><span><strong>{scene.title}</strong><small>{scene.kicker} · {scene.note}</small></span><ArrowUpRight size={15} /></button>) : <span className="command-center__empty">No signal matched that query.</span>}</div><div className="command-center__hint"><span>ENTER TO OPEN</span><span>ESC TO CLOSE</span></div></section></div>;
+}
+
 function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -306,6 +326,8 @@ export default function Home() {
     return { name: constrained ? (compact ? "MOBILE / EFFICIENT" : "DESKTOP / CONSERVED") : "DESKTOP / HIGH FIDELITY", constrained, minSpeed: constrained ? 2 : 5, source: constrained ? "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" : "/manus-storage/lumina-scroll-sequence-4k_d765b587.webm", type: constrained ? "video/mp4" : "video/webm" };
   }, []);
   const [networkNotice, setNetworkNotice] = useState<"weak" | "offline" | null>(null);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [accessibilityMode, setAccessibilityMode] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
@@ -318,6 +340,10 @@ export default function Home() {
   const isReady = videoState === "ready";
   const loaderPercent = Math.max(8, loadProgress);
   const loaderStage = videoState === "error" ? "SIGNAL RETRY" : loaderPercent < 34 ? "CALIBRATING LENS" : loaderPercent < 78 ? "LOCKING SATELLITE" : "SIGNAL READY";
+  const jumpToScene = (index: number) => {
+    const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+    window.scrollTo({ top: maxScroll * (index / observationScenes.length), behavior: motionEnabled ? "smooth" : "auto" });
+  };
 
   useEffect(() => {
     let timer = 0;
@@ -340,7 +366,15 @@ export default function Home() {
   }, [videoState, deviceProfile]);
 
   useEffect(() => {
-    const connection = (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number } }).connection;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "/" && !["INPUT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); setCommandOpen(true); }
+      if (event.key === "Escape") setCommandOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
     const quality = telemetry.quality;
     if (quality === "weak" && navigator.onLine) setNetworkNotice("weak");
     else if (!navigator.onLine) setNetworkNotice("offline");
@@ -376,10 +410,13 @@ export default function Home() {
   };
 
   return (
-    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"}`}>
+    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""}`}>
       <ContextCursor />
       <ScrollCue />
-      <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button>
+      <SceneRail onSelect={jumpToScene} />
+      <button type="button" data-cursor="open" className="command-trigger liquid-glass" onClick={() => setCommandOpen(true)} aria-label="Open Command Center"><span>⌘ /</span> Explore</button>
+      <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} onJump={jumpToScene} />
+      <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button><button type="button" data-cursor="open" className="accessibility-toggle liquid-glass" onClick={() => setAccessibilityMode((value) => !value)} aria-pressed={accessibilityMode}>A11y {accessibilityMode ? "on" : "off"}</button>
       <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
       {networkNotice && <div className={`network-notice network-notice--${networkNotice}`} role="status" aria-live="polite"><span className="network-notice__signal" /><div><strong>{networkNotice === "offline" ? "Signal interrupted" : "Connection reduced"}</strong><small>{networkNotice === "offline" ? "Waiting for the network to return." : `REVAX switched to ${deviceProfile.name} for a smoother view.`}</small></div><button type="button" onClick={() => setNetworkNotice(null)} aria-label="Dismiss connection notice">×</button></div>}
       {telemetryOpen && <aside className={`telemetry-panel telemetry-panel--${telemetry.quality} liquid-glass`} aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className={`telemetry-quality telemetry-quality--${telemetry.quality}`}><span className="telemetry-quality__dot" /><strong>{telemetry.quality === "excellent" ? "Excellent connection" : telemetry.quality === "fair" ? "Stable connection" : telemetry.quality === "weak" ? "Weak connection" : "Measuring connection"}</strong><small>{telemetry.quality === "excellent" ? "High bandwidth / ready for 4K" : telemetry.quality === "fair" ? "Moderate bandwidth / adaptive" : telemetry.quality === "weak" ? "Low bandwidth / conserve motion" : "Waiting for live samples"}</small></div><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong><Sparkline values={telemetryHistory.buffer} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "cyan"} /></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong><span className="telemetry-meter"><span style={{ width: `${(Number(telemetry.ready.split("/")[0]) / 4) * 100}%` }} /></span></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong><Sparkline values={telemetryHistory.speed} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "violet"} /></div><div><small>NETWORK</small><strong>{telemetry.link}</strong><span className="telemetry-bars"><i /><i /><i /><i /><i /></span></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong><Sparkline values={telemetryHistory.latency} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "white"} /></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong><span className={`telemetry-live-dot ${telemetry.edge === "ONLINE" ? "is-online" : ""}`} /></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
@@ -483,6 +520,8 @@ export default function Home() {
         </section>
 
         <ScrollStory videoRef={videoRef} motionEnabled={motionEnabled} />
+
+        <section id="signal-archive" className="signal-archive" aria-labelledby="archive-title"><div className="signal-archive__header"><div><p className="signal-archive__eyebrow">REVAX / SIGNAL ARCHIVE</p><h2 id="archive-title">Keep the signal.</h2></div><p>A living index of observations, traces, and quiet phenomena. Choose a frequency and return to the scene.</p></div><div className="signal-archive__grid">{observationScenes.slice(0, 4).map((scene, index) => <button type="button" data-cursor="explore" key={scene.index} onClick={() => jumpToScene(index)} className="archive-card"><span className="archive-card__index">{scene.index}</span><span className="archive-card__image" style={{ backgroundImage: `url(${scene.image})` }} /><span className="archive-card__content"><small>{scene.kicker}</small><strong>{scene.title}</strong><em>{scene.note}</em></span><ArrowUpRight size={15} /></button>)}</div></section>
 
         <motion.footer
           id="lumina-footer"
