@@ -327,8 +327,10 @@ type AmbientYouTube = { Player: new (target: HTMLElement, options: { videoId: st
 function AmbientAudio() {
   const mountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<AmbientPlayer | null>(null);
-  const [enabled, setEnabled] = useState(false);
+  const [volume, setVolume] = useState(() => { try { const raw = window.localStorage.getItem("revax-ambient-volume"); if (raw === null) return 50; const stored = Number(raw); return Number.isFinite(stored) ? Math.min(100, Math.max(20, stored)) : 50; } catch { return 50; } });
   const [needsGesture, setNeedsGesture] = useState(false);
+  const volumeRef = useRef(volume);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
 
   useEffect(() => {
     let disposed = false;
@@ -340,8 +342,8 @@ function AmbientAudio() {
         videoId: "joJtbRdupBg",
         playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: "joJtbRdupBg", playsinline: 1, rel: 0, modestbranding: 1 },
         events: {
-          onReady: ({ target }) => { target.setVolume(50); target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
-          onStateChange: ({ data }) => { if (data === 1) { setEnabled(true); setNeedsGesture(false); } },
+          onReady: ({ target }) => { target.setVolume(volumeRef.current); target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
+          onStateChange: ({ data }) => { if (data === 1) setNeedsGesture(false); },
         },
       });
     };
@@ -353,13 +355,15 @@ function AmbientAudio() {
     script.src = "https://www.youtube.com/iframe_api";
     script.async = true;
     document.head.appendChild(script);
-    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { player.setVolume(50); player.playVideo(); setEnabled(true); setNeedsGesture(false); } };
+    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { player.setVolume(volumeRef.current); player.playVideo(); setNeedsGesture(false); } };
     window.addEventListener("pointerdown", startOnFirstInteraction, { once: true, passive: true });
     return () => { disposed = true; window.removeEventListener("pointerdown", startOnFirstInteraction); const current = (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady; if (current) (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = previousReady; };
   }, []);
 
-  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(50); player.playVideo(); setEnabled(true); setNeedsGesture(false); };
-  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-live="polite"><span className="ambient-audio__pulse" /><span>{enabled ? "AMBIENT / 50%" : "AMBIENT AUDIO"}</span>{needsGesture && <button type="button" onClick={enableAudio}>{"Enable"}</button>}</div></>;
+  useEffect(() => { try { window.localStorage.setItem("revax-ambient-volume", String(volume)); } catch { /* storage may be unavailable */ } }, [volume]);
+  const changeVolume = (next: number) => { const safeVolume = Math.min(100, Math.max(20, next)); setVolume(safeVolume); playerRef.current?.setVolume(safeVolume); };
+  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(volume); player.playVideo(); setNeedsGesture(false); };
+  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-label="Ambient music volume control"><span className="ambient-audio__icon" aria-hidden="true">◉</span><span className="ambient-audio__pulse" /><label className="ambient-audio__volume"><span>VOL</span><input type="range" min="20" max="100" step="1" value={Math.max(20, volume)} onChange={(event) => changeVolume(Number(event.target.value))} aria-label={`Ambient music volume ${volume}%`} /><output>{volume}%</output></label>{needsGesture && <button type="button" className="ambient-audio__enable" onClick={enableAudio}>Enable</button>}</div></>;
 }
 
 function LuminaSvgMark({ className = "" }: { className?: string }) {
