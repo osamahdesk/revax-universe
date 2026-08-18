@@ -326,7 +326,7 @@ function CommandCenter({ open, onClose, onJump }: { open: boolean; onClose: () =
   return <div className="command-center__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="command-center liquid-glass" role="dialog" aria-modal="true" aria-labelledby="command-center-title"><div className="command-center__top"><span>REVAX / COMMAND CENTER</span><button type="button" onClick={onClose} aria-label="Close command center">×</button></div><h2 id="command-center-title">Find a signal.</h2><p>Jump directly into an observation, study, or atmospheric trace.</p><label className="command-center__input"><span>/</span><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the archive" /></label><div className="command-center__results">{matches.length ? matches.map(({ scene, index }) => <button type="button" key={scene.index} data-cursor="open" onClick={() => { onJump(index); onClose(); }}><span className="command-center__index">{scene.index}</span><span><strong>{scene.title}</strong><small>{scene.kicker} · {scene.note}</small></span><ArrowUpRight size={15} /></button>) : <span className="command-center__empty">No signal matched that query.</span>}</div><div className="command-center__hint"><span>ENTER TO OPEN</span><span>ESC TO CLOSE</span></div></section></div>;
 }
 
-type AmbientPlayer = { playVideo: () => void; pauseVideo: () => void; setVolume: (volume: number) => void; mute: () => void; unMute: () => void; };
+type AmbientPlayer = { playVideo: () => void; pauseVideo: () => void; setVolume: (volume: number) => void; };
 type AmbientYouTube = { Player: new (target: HTMLElement, options: { videoId: string; playerVars: Record<string, number | string>; events: { onReady: (event: { target: AmbientPlayer }) => void; onStateChange: (event: { data: number }) => void; }; }) => AmbientPlayer; };
 
 function AmbientAudio() {
@@ -334,9 +334,12 @@ function AmbientAudio() {
   const playerRef = useRef<AmbientPlayer | null>(null);
   const [volume, setVolume] = useState(() => { try { const raw = window.localStorage.getItem("revax-ambient-volume"); if (raw === null) return 50; const stored = Number(raw); return Number.isFinite(stored) ? Math.min(100, Math.max(20, stored)) : 50; } catch { return 50; } });
   const [muted, setMuted] = useState(() => { try { return window.localStorage.getItem("revax-ambient-muted") === "true"; } catch { return false; } });
+  const [muteNotice, setMuteNotice] = useState<string | null>(null);
   const [needsGesture, setNeedsGesture] = useState(false);
   const volumeRef = useRef(volume);
   const mutedRef = useRef(muted);
+  const appliedVolumeRef = useRef(muted ? 0 : volume);
+  const fadeTimerRef = useRef<number | null>(null);
   useEffect(() => { volumeRef.current = volume; mutedRef.current = muted; }, [volume, muted]);
 
   useEffect(() => {
@@ -349,7 +352,7 @@ function AmbientAudio() {
         videoId: "joJtbRdupBg",
         playerVars: { autoplay: 1, controls: 0, loop: 1, playlist: "joJtbRdupBg", playsinline: 1, rel: 0, modestbranding: 1 },
         events: {
-          onReady: ({ target }) => { target.setVolume(volumeRef.current); if (mutedRef.current) target.mute(); else target.unMute(); target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
+          onReady: ({ target }) => { const initialVolume = mutedRef.current ? 0 : volumeRef.current; target.setVolume(initialVolume); appliedVolumeRef.current = initialVolume; target.playVideo(); window.setTimeout(() => { if (!disposed) setNeedsGesture(true); }, 1400); },
           onStateChange: ({ data }) => { if (data === 1) setNeedsGesture(false); },
         },
       });
@@ -362,16 +365,18 @@ function AmbientAudio() {
     script.src = "https://www.youtube.com/iframe_api";
     script.async = true;
     document.head.appendChild(script);
-    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { player.setVolume(volumeRef.current); if (mutedRef.current) player.mute(); else player.unMute(); player.playVideo(); setNeedsGesture(false); } };
+    const startOnFirstInteraction = () => { const player = playerRef.current; if (player) { const nextVolume = mutedRef.current ? 0 : volumeRef.current; player.setVolume(nextVolume); appliedVolumeRef.current = nextVolume; player.playVideo(); setNeedsGesture(false); } };
     window.addEventListener("pointerdown", startOnFirstInteraction, { once: true, passive: true });
     return () => { disposed = true; window.removeEventListener("pointerdown", startOnFirstInteraction); const current = (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady; if (current) (window as Window & { onYouTubeIframeAPIReady?: () => void }).onYouTubeIframeAPIReady = previousReady; };
   }, []);
 
   useEffect(() => { try { window.localStorage.setItem("revax-ambient-volume", String(volume)); window.localStorage.setItem("revax-ambient-muted", String(muted)); } catch { /* storage may be unavailable */ } }, [volume, muted]);
-  const changeVolume = (next: number) => { const safeVolume = Math.min(100, Math.max(20, next)); setVolume(safeVolume); playerRef.current?.setVolume(safeVolume); };
-  const toggleMute = () => { const player = playerRef.current; const next = !muted; if (player) { if (next) player.mute(); else { player.unMute(); player.setVolume(volume); } } setMuted(next); };
-  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(volume); if (muted) player.mute(); else player.unMute(); player.playVideo(); setNeedsGesture(false); };
-  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-label="Ambient music controls"><button type="button" className="ambient-audio__mute" onClick={toggleMute} aria-pressed={muted} aria-label={muted ? "Unmute ambient music" : "Mute ambient music"}>{muted ? <VolumeX size={14} /> : <Volume2 size={14} />}</button><span className="ambient-audio__pulse" /><label className="ambient-audio__volume"><span>VOL</span><input type="range" min="20" max="100" step="1" value={Math.max(20, volume)} onChange={(event) => changeVolume(Number(event.target.value))} aria-label={`Ambient music volume ${volume}%`} /><output>{volume}%</output></label>{needsGesture && <button type="button" className="ambient-audio__enable" onClick={enableAudio}>Enable</button>}</div></>;
+  useEffect(() => () => { if (fadeTimerRef.current) window.clearInterval(fadeTimerRef.current); }, []);
+  const fadeVolume = (target: number) => { const player = playerRef.current; if (!player) return; if (fadeTimerRef.current) window.clearInterval(fadeTimerRef.current); const start = appliedVolumeRef.current; const steps = 14; let step = 0; fadeTimerRef.current = window.setInterval(() => { step += 1; const next = Math.round(start + (target - start) * (step / steps)); appliedVolumeRef.current = next; player.setVolume(next); if (step >= steps && fadeTimerRef.current) { window.clearInterval(fadeTimerRef.current); fadeTimerRef.current = null; } }, 20); };
+  const changeVolume = (next: number) => { const safeVolume = Math.min(100, Math.max(20, next)); setVolume(safeVolume); if (!muted) fadeVolume(safeVolume); };
+  const toggleMute = () => { const next = !muted; setMuted(next); setMuteNotice(next ? "AUDIO MUTED" : "AUDIO RESTORED"); window.setTimeout(() => setMuteNotice(null), 1800); if (next) fadeVolume(0); else fadeVolume(volume); };
+  const enableAudio = () => { const player = playerRef.current; if (!player) return; player.setVolume(muted ? 0 : volume); appliedVolumeRef.current = muted ? 0 : volume; player.playVideo(); setNeedsGesture(false); };
+  return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-label="Ambient music controls"><button type="button" className="ambient-audio__mute" onClick={toggleMute} aria-pressed={muted} aria-label={muted ? "Unmute ambient music" : "Mute ambient music"}>{muted ? <VolumeX size={14} /> : <Volume2 size={14} />}</button><span className="ambient-audio__pulse" /><label className="ambient-audio__volume"><span>VOL</span><input type="range" min="20" max="100" step="1" value={Math.max(20, volume)} onChange={(event) => changeVolume(Number(event.target.value))} aria-label={`Ambient music volume ${volume}%`} /><output>{volume}%</output></label>{needsGesture && <button type="button" className="ambient-audio__enable" onClick={enableAudio}>Enable</button>} {muteNotice && <span className="ambient-audio__notice" role="status">{muteNotice}</span>}</div></>;
 }
 
 function LuminaSvgMark({ className = "" }: { className?: string }) {
@@ -479,15 +484,13 @@ export default function Home() {
 
   return (
     <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""}`}>
-      <AmbientAudio />
       <ContextCursor />
       <ScrollCue />
       <SceneRail onSelect={jumpToScene} />
       <button type="button" data-cursor="open" className="command-trigger liquid-glass" onClick={openCommandCenter} aria-label="Open Command Center"><span>⌘ /</span> Explore</button>
+      <header className="control-deck" aria-label="REVAX live controls"><div className="control-deck__primary"><button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button><button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button></div><div className="control-deck__status"><span className="control-deck__status-dot" /> Viewing live</div><div className="control-deck__secondary"><button type="button" data-cursor="open" className="accessibility-toggle liquid-glass" onClick={() => setAccessibilityMode((value) => !value)} aria-pressed={accessibilityMode}>A11y {accessibilityMode ? "on" : "off"}</button><AmbientAudio /></div></header>
       <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} onJump={jumpToScene} />
       {selectedArchive && <ArchiveModal scene={selectedArchive} onClose={() => setSelectedArchive(null)} onJump={() => jumpToScene(observationScenes.findIndex((item) => item.index === selectedArchive.index))} />}
-      <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button><button type="button" data-cursor="open" className="accessibility-toggle liquid-glass" onClick={() => setAccessibilityMode((value) => !value)} aria-pressed={accessibilityMode}>A11y {accessibilityMode ? "on" : "off"}</button>
-      <button type="button" data-cursor="open" className="telemetry-trigger liquid-glass" onClick={() => setTelemetryOpen((value) => !value)} aria-expanded={telemetryOpen}><span className="telemetry-trigger__pulse" /> Telemetry <span className="telemetry-trigger__chevron">{telemetryOpen ? "−" : "+"}</span></button>
       {networkNotice && <div className={`network-notice network-notice--${networkNotice}`} role="status" aria-live="polite"><span className="network-notice__signal" /><div><strong>{networkNotice === "offline" ? "Signal interrupted" : "Connection reduced"}</strong><small>{networkNotice === "offline" ? "Waiting for the network to return." : `REVAX switched to ${deviceProfile.name} for a smoother view.`}</small></div><button type="button" onClick={() => setNetworkNotice(null)} aria-label="Dismiss connection notice">×</button></div>}
       {telemetryOpen && <aside className={`telemetry-panel telemetry-panel--${telemetry.quality} liquid-glass`} aria-label="Live telemetry"><div className="telemetry-panel__head"><span>REVAX / LIVE TELEMETRY</span><button type="button" onClick={() => setTelemetryOpen(false)} aria-label="Close telemetry">×</button></div><p className="telemetry-panel__state"><span className={`telemetry-panel__status telemetry-panel__status--${telemetry.edge.toLowerCase()}`} /> {telemetry.edge === "ONLINE" ? "Signal locked" : telemetry.edge === "OFFLINE" ? "Signal unavailable" : "Synchronizing signal"}</p><div className={`telemetry-quality telemetry-quality--${telemetry.quality}`}><span className="telemetry-quality__dot" /><strong>{telemetry.quality === "excellent" ? "Excellent connection" : telemetry.quality === "fair" ? "Stable connection" : telemetry.quality === "weak" ? "Weak connection" : "Measuring connection"}</strong><small>{telemetry.quality === "excellent" ? "High bandwidth / ready for 4K" : telemetry.quality === "fair" ? "Moderate bandwidth / adaptive" : telemetry.quality === "weak" ? "Low bandwidth / conserve motion" : "Waiting for live samples"}</small></div><div className="telemetry-panel__grid"><div><small>BUFFER</small><strong>{telemetry.buffered}%</strong><Sparkline values={telemetryHistory.buffer} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "cyan"} /></div><div><small>READY STATE</small><strong>{telemetry.ready}</strong><span className="telemetry-meter"><span style={{ width: `${(Number(telemetry.ready.split("/")[0]) / 4) * 100}%` }} /></span></div><div><small>DOWNLOAD</small><strong>{telemetry.speed}</strong><Sparkline values={telemetryHistory.speed} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "violet"} /></div><div><small>NETWORK</small><strong>{telemetry.link}</strong><span className="telemetry-bars"><i /><i /><i /><i /><i /></span></div><div><small>RESPONSE</small><strong>{telemetry.latency}</strong><Sparkline values={telemetryHistory.latency} tone={telemetry.quality === "excellent" ? "green" : telemetry.quality === "fair" ? "amber" : telemetry.quality === "weak" ? "red" : "white"} /></div><div><small>MOTION</small><strong>{motionEnabled ? "ON" : "OFF"}</strong><span className={`telemetry-live-dot ${telemetry.edge === "ONLINE" ? "is-online" : ""}`} /></div></div><p className="telemetry-panel__note">Measured locally from the active video resource and browser connection.</p></aside>}
       <video
@@ -543,10 +546,6 @@ export default function Home() {
             </span>
             <span className="text-sm font-medium tracking-[0.30em]">REVAX <span className="text-white/45">UNIVERSE</span></span>
           </a>
-          <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-white/60">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#a8e8ff] shadow-[0_0_16px_#a8e8ff]" />
-            Viewing live
-          </div>
         </header>
 
         <section id="top" className="relative flex flex-1 flex-col justify-end pt-28 md:pt-40" aria-labelledby="lumina-title">

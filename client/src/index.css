@@ -502,3 +502,18 @@
 @keyframes ambient-pulse { 0%, 100% { opacity: .45; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.15); } }
 @media (max-width: 640px) { .ambient-audio { top: 4.5rem; right: .75rem; gap: .38rem; padding: .45rem .5rem; font-size: .5rem; } .ambient-audio:hover, .ambient-audio:focus-within { width: 11rem; } .ambient-audio:hover .ambient-audio__volume input, .ambient-audio:focus-within .ambient-audio__volume input { width: 4.2rem; } }
 @media (prefers-reduced-motion: reduce) { .ambient-audio__pulse { animation: none; } }
+
+/* REVAX control deck: one disciplined command cluster matching the observatory reference. */
+.control-deck { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 25; display: grid; justify-items: end; gap: .55rem; width: min(28rem, calc(100vw - 2rem)); pointer-events: none; }
+.control-deck__primary, .control-deck__secondary { display: flex; align-items: center; justify-content: flex-end; gap: .65rem; pointer-events: auto; }
+.control-deck__primary > button, .control-deck__secondary > button { position: relative; top: auto; right: auto; bottom: auto; left: auto; transform: none; }
+.control-deck__primary .telemetry-trigger, .control-deck__primary .motion-toggle { min-width: 8.7rem; justify-content: center; }
+.control-deck__status { display: inline-flex; align-items: center; gap: .55rem; padding-right: .35rem; color: rgba(223,248,255,.72); font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; pointer-events: none; }
+.control-deck__status-dot { width: .48rem; height: .48rem; border-radius: 50%; background: #a8e8ff; box-shadow: 0 0 14px rgba(168,232,255,.9); animation: telemetry-pulse 2s infinite; }
+.control-deck__secondary { position: relative; min-height: 2.5rem; }
+.control-deck__secondary .accessibility-toggle { position: relative; top: auto; right: auto; bottom: auto; }
+.control-deck__secondary .ambient-audio { position: relative; top: auto; right: auto; bottom: auto; z-index: 1; margin-left: .1rem; }
+.control-deck__secondary .ambient-audio__notice { position: absolute; top: calc(100% + .45rem); right: 0; white-space: nowrap; padding: .48rem .65rem; border: 1px solid rgba(168,232,255,.28); background: rgba(4,12,24,.82); color: #b9f4ff; font-size: .55rem; letter-spacing: .16em; box-shadow: 0 10px 30px rgba(0,0,0,.24); animation: mute-notice-in 180ms cubic-bezier(.23,1,.32,1) both; }
+@keyframes mute-notice-in { from { opacity: 0; transform: translateY(-5px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 700px) { .control-deck { top: 4.35rem; right: .75rem; width: calc(100vw - 1.5rem); } .control-deck__primary { gap: .4rem; } .control-deck__primary .telemetry-trigger, .control-deck__primary .motion-toggle { min-width: auto; padding-inline: .65rem; } .control-deck__status { font-size: .52rem; } .control-deck__secondary { min-height: 2.2rem; } }
+@media (prefers-reduced-motion: reduce) { .control-deck__status-dot { animation: none; } .control-deck__secondary .ambient-audio__notice { animation: none; } }
