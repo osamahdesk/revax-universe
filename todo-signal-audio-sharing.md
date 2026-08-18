@@ -36,4 +36,13 @@
 | [x] | إضافة شاشة نهاية تتجمع فيها المدارات حول شعار REVAX. |
 | [x] | اختبار نهاية الصفحة وحفظ النسخة. |
 | [x] | إضافة hover تفاعلي لشعار REVAX في شاشة النهاية. |
-| [x] | اختبار الحركة والوصولية وحفظ النسخة.
+| [x] | اختبار الحركة والوصولية وحفظ النسخة. |
+| [x] | إضافة Signal Memory لحفظ آخر مشهد ومتابعة الرحلة. |
+| [x] | ربط Adaptive Atmosphere بجودة الشبكة والمشهد. |
+| [x] | إضافة Orbital Lens لكشف المعلومات حول المؤشر. |
+| [x] | إضافة Mission Control Split وTemporal Echo. |
+| [x] | إضافة Signal Confidence Ring وTerminal Notes. |
+| [x] | تطوير Zero-Gravity Cards للبطاقات المدارية. |
+| [x] | تطوير Final Constellation من نقاط المشاهد الخمسة. |
+| [x] | تطوير Invisible Navigation للنقاط المدارية. |
+| [x] | استثناء أنماط Calm وDeep وSignal حسب طلب المستخدم.

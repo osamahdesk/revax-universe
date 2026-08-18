@@ -94,7 +94,7 @@ function CursorRevealCard({ item, index }: { item: (typeof highlights)[number]; 
   );
 }
 
-function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HTMLVideoElement | null>; motionEnabled: boolean }) {
+function ScrollStory({ videoRef, motionEnabled, missionControl }: { videoRef: React.RefObject<HTMLVideoElement | null>; motionEnabled: boolean; missionControl: boolean }) {
   const sectionRef = useRef<HTMLElement>(null);
   const [progress, setProgress] = useState(0);
   const targetProgress = useRef(0);
@@ -107,6 +107,7 @@ function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HT
   const pointerFrame = useRef(0);
   const activeScene = Math.min(observationScenes.length - 1, Math.floor(progress * observationScenes.length));
   const scene = observationScenes[activeScene];
+  const previousScene = observationScenes[Math.max(0, activeScene - 1)];
 
   const handlePanelPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "touch") return;
@@ -202,14 +203,14 @@ function ScrollStory({ videoRef, motionEnabled }: { videoRef: React.RefObject<HT
     <section ref={sectionRef} id="scroll-story" className="relative h-[330vh] w-full" aria-label="Lumina observation sequence">
       <div className="sticky top-0 flex min-h-screen items-center py-16">
         <div ref={panelRef} onPointerMove={handlePanelPointerMove} className="reveal-panel relative isolate flex min-h-[72vh] w-full items-center overflow-hidden rounded-[2.5rem] border border-white/15 bg-[#050912]/55 px-6 py-12 shadow-[0_0_90px_rgba(75,168,220,0.08)] backdrop-blur-[2px] sm:px-10 md:px-16" style={{ "--cursor-x": "50%", "--cursor-y": "50%", transform: `perspective(1400px) rotateX(${(0.5 - progress) * 1.5}deg)` } as React.CSSProperties}>
-          <div className="lens-field pointer-events-none absolute inset-0 opacity-80" aria-hidden="true" />
+          <div className="lens-field pointer-events-none absolute inset-0 opacity-80" aria-hidden="true" /><div className="orbital-lens" aria-hidden="true"><span>ORBITAL LENS</span><strong>{scene.note}</strong><small>{scene.kicker}</small></div><div className="temporal-echo pointer-events-none absolute inset-0" aria-hidden="true"><img src={previousScene.image} alt="" /></div>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_48%,transparent_0,rgba(2,7,16,0.1)_35%,rgba(2,7,16,0.88)_100%)]" aria-hidden="true" />
           {observationScenes.map((item, index) => <div key={item.index} className="reveal-scene absolute inset-0" style={{ opacity: sceneImageOpacity(index, progress) }}><img src={item.image} alt="" className="absolute inset-0 h-full w-full object-cover object-center will-change-transform" style={{ transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} /><img src={item.revealImage} alt="" className="reveal-scene__image absolute inset-0 h-full w-full object-cover object-center" style={{ transform: `scale(${1.04 - sceneImageOpacity(index, progress) * 0.04}) translate3d(${(progress - 0.5) * (index === 1 ? -24 : 18)}px, ${(progress - 0.5) * (index + 1) * 14}px, 0)` }} /></div>)}
           <div className="absolute inset-0 bg-gradient-to-r from-[#050912]/95 via-[#050912]/45 to-transparent" aria-hidden="true" />
           <div className="motion-scanline pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[#a8e8ff]/30" style={{ transform: `translateY(${(progress - 0.5) * 220}px)` }} aria-hidden="true" />
           <div className="orbital-sweep pointer-events-none absolute -right-1/4 top-1/2 h-[125%] w-3/4 rounded-[50%] border border-[#a8e8ff]/15" style={{ transform: `translate3d(${(progress - 0.5) * -80}px, ${(progress - 0.5) * 36}px, 0) rotate(${(progress - 0.5) * 9}deg)`, opacity: activeScene === 3 ? 0.55 + Math.max(0, (progress - 0.7) / 0.3) * 0.3 : 0.55 }} aria-hidden="true" />
           <div className="eclipse-veil pointer-events-none absolute inset-0" style={{ opacity: activeScene >= 3 ? Math.max(0, (progress - 0.62) / 0.38) : 0, transform: `scale(${1 + Math.max(0, progress - 0.62) * 0.12})` }} aria-hidden="true" />
-          <div className="scene-transition-wash pointer-events-none absolute inset-0" style={{ opacity: activeScene === 4 ? Math.max(0, (progress - 0.82) / 0.18) : 0 }} aria-hidden="true" />
+          <div className="scene-transition-wash pointer-events-none absolute inset-0" style={{ opacity: activeScene === 4 ? Math.max(0, (progress - 0.82) / 0.18) : 0 }} aria-hidden="true" />{missionControl && <aside className="mission-control liquid-glass" aria-label="Mission control split"><span>MISSION CONTROL / SPLIT VIEW</span><strong>{scene.kicker}</strong><small>FRAME {String(scene.index).padStart(2, "0")} · VECTOR {(progress * 360).toFixed(1)}° · TRACE LOCKED</small></aside>}
           <div className="observatory-metrics pointer-events-none absolute right-6 top-6 z-10 hidden text-right md:block" aria-hidden="true"><span>LIVE ARRAY / 05</span><strong>{Math.round(progress * 100)}%</strong><small>{activeScene === 4 ? "SIGNAL CONVERGENCE" : "ATMOSPHERIC INDEX"}</small></div>
 
           <div className="relative z-10 grid w-full grid-cols-1 gap-12 md:grid-cols-[minmax(0,1fr)_16rem] md:items-end">
@@ -382,13 +383,14 @@ function AmbientAudio() {
 function FutureSystems({ observatoryMode, onToggleObservatory, quality }: { observatoryMode: boolean; onToggleObservatory: () => void; quality: NetworkQuality }) {
   const [progress, setProgress] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
+  const [resumeScene, setResumeScene] = useState<number | null>(() => { try { const saved = Number(window.localStorage.getItem("revax-last-signal")); return Number.isFinite(saved) && saved > 0 ? saved : null; } catch { return null; } });
   useEffect(() => { let frame = 0; const update = () => { const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); setProgress(Math.max(0, Math.min(1, window.scrollY / maxScroll))); frame = 0; }; const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); }; update(); window.addEventListener("scroll", onScroll, { passive: true }); return () => { if (frame) cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); }; }, []);
   const active = Math.min(observationScenes.length - 1, Math.floor(progress * observationScenes.length));
-  useEffect(() => { const messages = ["SIGNAL ACQUIRED", "ATMOSPHERIC PATH UPDATED", "DEEP FIELD IN FOCUS", "ECLIPSE THRESHOLD APPROACHING", "SIGNAL CONVERGENCE LOCKED"]; setNotice(messages[active]); const timer = window.setTimeout(() => setNotice(null), 1700); return () => window.clearTimeout(timer); }, [active]);
-  const jump = (index: number) => { const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); window.scrollTo({ top: maxScroll * (index / observationScenes.length), behavior: observatoryMode ? "auto" : "smooth" }); };
+  useEffect(() => { if (active > 0) { try { window.localStorage.setItem("revax-last-signal", String(active)); } catch { /* storage may be unavailable */ } } const messages = ["SIGNAL ACQUIRED", "ATMOSPHERIC PATH UPDATED", "DEEP FIELD IN FOCUS", "ECLIPSE THRESHOLD APPROACHING", "SIGNAL CONVERGENCE LOCKED"]; setNotice(messages[active]); const timer = window.setTimeout(() => setNotice(null), 1700); return () => window.clearTimeout(timer); }, [active]);
+  const jump = (index: number) => { const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); setResumeScene(null); window.scrollTo({ top: maxScroll * (index / observationScenes.length), behavior: observatoryMode ? "auto" : "smooth" }); };
   const orbitAngle = progress * 360;
   const isFinal = progress > 0.94;
-  return <><div className="future-orbit" style={{ "--orbit-angle": `${orbitAngle}deg` } as React.CSSProperties} aria-hidden="true"><span className="future-orbit__ring future-orbit__ring--one" /><span className="future-orbit__ring future-orbit__ring--two" /><i className="future-orbit__node" /></div><nav className="future-timeline liquid-glass" aria-label="Cosmic timeline">{observationScenes.map((scene, index) => <button key={scene.index} type="button" className={active === index ? "is-active" : ""} onClick={() => jump(index)} aria-label={`Jump to ${scene.kicker}`}><span>{scene.index}</span><em>{scene.kicker.split(" / ")[0]}</em></button>)}</nav><aside className={`coordinate-hud coordinate-hud--${quality} liquid-glass`} aria-label="Live coordinates"><span>COORDINATE / REVAX</span><strong>{(12.4 + progress * 2.8).toFixed(2)}°N&nbsp;&nbsp;{(42.8 + progress * 18.6).toFixed(2)}°E</strong><small>VECTOR {String(active + 1).padStart(2, "0")} / 05 · ALT {Math.round(184 + progress * 640)} KM</small></aside><div className="future-system-notice" aria-live="polite">{notice && <span>{notice}</span>}</div><button type="button" className="observatory-toggle liquid-glass" onClick={onToggleObservatory} aria-pressed={observatoryMode}><span /> {observatoryMode ? "Observatory mode" : "Full signal"}</button><section className={`end-signal ${isFinal ? "is-visible" : ""}`} aria-live="polite" aria-label="REVAX signal complete"><div className="end-signal__orbit end-signal__orbit--one" /><div className="end-signal__orbit end-signal__orbit--two" /><div className="end-signal__orbit end-signal__orbit--three" /><div className="end-signal__core" data-cursor="explore" tabIndex={0} role="img" aria-label="REVAX signal complete"><RevaxMark /><span>REVAX</span><small>SIGNAL COMPLETE / 05</small></div><p>THE SIGNAL REMAINS</p></section></>;
+  return <><div className={`adaptive-atmosphere adaptive-atmosphere--${quality}`} aria-hidden="true" /><div className="future-orbit" style={{ "--orbit-angle": `${orbitAngle}deg` } as React.CSSProperties} aria-hidden="true"><span className="future-orbit__ring future-orbit__ring--one" /><span className="future-orbit__ring future-orbit__ring--two" /><i className="future-orbit__node" /></div><nav className="future-timeline liquid-glass" aria-label="Cosmic timeline">{observationScenes.map((scene, index) => <button key={scene.index} type="button" className={active === index ? "is-active" : ""} onClick={() => jump(index)} aria-label={`Jump to ${scene.kicker}`}><span>{scene.index}</span><em>{scene.kicker.split(" / ")[0]}</em></button>)}</nav><aside className={`coordinate-hud coordinate-hud--${quality} liquid-glass`} aria-label="Live coordinates"><span>COORDINATE / REVAX</span><i className="coordinate-hud__confidence" aria-hidden="true" /><strong>{(12.4 + progress * 2.8).toFixed(2)}°N&nbsp;&nbsp;{(42.8 + progress * 18.6).toFixed(2)}°E</strong><small>VECTOR {String(active + 1).padStart(2, "0")} / 05 · ALT {Math.round(184 + progress * 640)} KM</small></aside><div className="future-system-notice" aria-live="polite">{notice && <span>{notice}</span>}</div>{resumeScene !== null && active === 0 && <button type="button" className="resume-signal liquid-glass" onClick={() => jump(resumeScene)}><span>RESUME SIGNAL {String(resumeScene + 1).padStart(2, "0")}</span><small>Continue your last observation</small></button>}<button type="button" className="observatory-toggle liquid-glass" onClick={onToggleObservatory} aria-pressed={observatoryMode}><span /> {observatoryMode ? "Observatory mode" : "Full signal"}</button><section className={`end-signal ${isFinal ? "is-visible" : ""}`} aria-live="polite" aria-label="REVAX signal complete"><div className="end-signal__orbit end-signal__orbit--one" /><div className="end-signal__orbit end-signal__orbit--two" /><div className="end-signal__orbit end-signal__orbit--three" />{observationScenes.map((_, index) => <i key={index} className={`end-signal__point end-signal__point--${index + 1}`} />)}<div className="end-signal__core" data-cursor="explore" tabIndex={0} role="img" aria-label="REVAX signal complete"><RevaxMark /><span>REVAX</span><small>SIGNAL COMPLETE / 05</small></div><p>THE SIGNAL REMAINS</p></section></>;
 }
 
 function LuminaSvgMark({ className = "" }: { className?: string }) {
@@ -411,6 +413,7 @@ export default function Home() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [accessibilityMode, setAccessibilityMode] = useState(false);
   const [observatoryMode, setObservatoryMode] = useState(false);
+  const [missionControl, setMissionControl] = useState(false);
   const [selectedArchive, setSelectedArchive] = useState<(typeof observationScenes)[number] | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
@@ -454,7 +457,8 @@ export default function Home() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "/" && !["INPUT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); setCommandOpen(true); }
-      if (event.key === "Escape") { setCommandOpen(false); setSelectedArchive(null); }
+      if (event.key === "Escape") { setCommandOpen(false); setSelectedArchive(null); setMissionControl(false); }
+      if (event.code === "Space" && !["INPUT", "TEXTAREA", "BUTTON"].includes((event.target as HTMLElement).tagName)) { event.preventDefault(); setMissionControl((value) => !value); }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -496,7 +500,7 @@ export default function Home() {
   };
 
   return (
-    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""} ${observatoryMode ? "observatory-mode" : ""}`}>
+    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white network-atmosphere--${telemetry.quality} ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""} ${observatoryMode ? "observatory-mode" : ""}`}>
       <FutureSystems observatoryMode={observatoryMode} onToggleObservatory={() => setObservatoryMode((value) => !value)} quality={telemetry.quality} />
       <ContextCursor />
       <ScrollCue />
@@ -602,7 +606,7 @@ export default function Home() {
           </motion.div>
         </section>
 
-        <ScrollStory videoRef={videoRef} motionEnabled={motionEnabled} />
+        <ScrollStory videoRef={videoRef} motionEnabled={motionEnabled} missionControl={missionControl} />
 
         <section id="signal-archive" className="signal-archive" aria-labelledby="archive-title"><div className="signal-archive__header"><div><p className="signal-archive__eyebrow">REVAX / SIGNAL ARCHIVE</p><h2 id="archive-title">Keep the signal.</h2></div><p>A living index of observations, traces, and quiet phenomena. Choose a frequency and return to the scene.</p></div><div className="signal-archive__grid">{observationScenes.slice(0, 4).map((scene, index) => <button type="button" data-cursor="explore" key={scene.index} onClick={() => setSelectedArchive(scene)} className="archive-card"><span className="archive-card__index">{scene.index}</span><span className="archive-card__image" style={{ backgroundImage: `url(${scene.image})` }} /><span className="archive-card__content"><small>{scene.kicker}</small><strong>{scene.title}</strong><em>{scene.note}</em></span><ArrowUpRight size={15} /></button>)}</div></section>
 
