@@ -37,17 +37,17 @@ const footerColumns = [
 ];
 
 const highlights = [
-  { title: "Orbital stories", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg" },
-  { title: "Weather systems", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg" },
-  { title: "Farther horizons", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg" },
+  { title: "Orbital stories", image: "/revax-assets/orbit-observatory.jpg", revealImage: "/revax-assets/aurora-data.jpg" },
+  { title: "Weather systems", image: "/revax-assets/aurora-data.jpg", revealImage: "/revax-assets/eclipse-reflection.jpg" },
+  { title: "Farther horizons", image: "/revax-assets/eclipse-reflection.jpg", revealImage: "/revax-assets/orbit-observatory.jpg" },
 ];
 
 const observationScenes = [
-  { index: "01", kicker: "ORBITAL STUDY / 01", title: "Watch what gathers beyond the horizon.", body: "A slow field guide to the forces that shape our shared sky. Scroll to move through the signal.", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "PERIGEE / 42.8°" },
-  { index: "02", kicker: "ATMOSPHERIC STUDY / 02", title: "The atmosphere keeps its own time.", body: "Trace the quiet movement of weather, light, and pressure as one continuous observation.", image: "/manus-storage/lumina-aurora-data_0db24b30.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "AURORA / ACTIVE" },
-  { index: "03", kicker: "DEEP FIELD / 03", title: "Clarity begins where the familiar ends.", body: "One final turn of the lens. Leave with a wider frame for the things still becoming visible.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", note: "ECLIPSE / 03:17" },
-  { index: "04", kicker: "ECLIPSE THRESHOLD / 04", title: "The dark edge makes the signal visible.", body: "Orbit resolves into eclipse: a measured crossing where shadow becomes another kind of light.", image: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", revealImage: "/manus-storage/lumina-aurora-data_0db24b30.jpg", note: "UMBRA / 04:12" },
-  { index: "05", kicker: "SIGNAL CONVERGENCE / 05", title: "Everything visible leaves a trace.", body: "The lens closes gently: atmosphere, orbit, and shadow converge into one readable signal.", image: "/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg", revealImage: "/manus-storage/lumina-eclipse-reflection_cf7e4c0a.jpg", note: "SIGNAL / LOCKED" },
+  { index: "01", kicker: "ORBITAL STUDY / 01", title: "Watch what gathers beyond the horizon.", body: "A slow field guide to the forces that shape our shared sky. Scroll to move through the signal.", image: "/revax-assets/orbit-observatory.jpg", revealImage: "/revax-assets/aurora-data.jpg", note: "PERIGEE / 42.8°" },
+  { index: "02", kicker: "ATMOSPHERIC STUDY / 02", title: "The atmosphere keeps its own time.", body: "Trace the quiet movement of weather, light, and pressure as one continuous observation.", image: "/revax-assets/aurora-data.jpg", revealImage: "/revax-assets/eclipse-reflection.jpg", note: "AURORA / ACTIVE" },
+  { index: "03", kicker: "DEEP FIELD / 03", title: "Clarity begins where the familiar ends.", body: "One final turn of the lens. Leave with a wider frame for the things still becoming visible.", image: "/revax-assets/eclipse-reflection.jpg", revealImage: "/revax-assets/orbit-observatory.jpg", note: "ECLIPSE / 03:17" },
+  { index: "04", kicker: "ECLIPSE THRESHOLD / 04", title: "The dark edge makes the signal visible.", body: "Orbit resolves into eclipse: a measured crossing where shadow becomes another kind of light.", image: "/revax-assets/eclipse-reflection.jpg", revealImage: "/revax-assets/aurora-data.jpg", note: "UMBRA / 04:12" },
+  { index: "05", kicker: "SIGNAL CONVERGENCE / 05", title: "Everything visible leaves a trace.", body: "The lens closes gently: atmosphere, orbit, and shadow converge into one readable signal.", image: "/revax-assets/orbit-observatory.jpg", revealImage: "/revax-assets/eclipse-reflection.jpg", note: "SIGNAL / LOCKED" },
 ];
 
 function sceneImageOpacity(index: number, progress: number) {
@@ -407,7 +407,7 @@ export default function Home() {
     const compact = window.matchMedia("(max-width: 767px)").matches;
     const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
     const constrained = compact || Boolean(connection?.saveData) || deviceMemory <= 4 || navigator.hardwareConcurrency <= 4;
-    return { name: constrained ? (compact ? "MOBILE / EFFICIENT" : "DESKTOP / CONSERVED") : "DESKTOP / HIGH FIDELITY", constrained, minSpeed: constrained ? 2 : 5, source: constrained ? "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4" : "/manus-storage/lumina-scroll-sequence-4k_d765b587.webm", type: constrained ? "video/mp4" : "video/webm" };
+    return { name: constrained ? (compact ? "MOBILE / EFFICIENT" : "DESKTOP / CONSERVED") : "DESKTOP / HIGH FIDELITY", constrained, minSpeed: constrained ? 2 : 5, source: constrained ? "/revax-assets/revax-sequence.mp4" : "/revax-assets/revax-sequence-4k.webm", type: constrained ? "video/mp4" : "video/webm" };
   }, []);
   const [networkNotice, setNetworkNotice] = useState<"weak" | "offline" | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -515,7 +515,7 @@ export default function Home() {
         ref={videoRef}
         className="fixed inset-0 w-full h-full object-cover z-[0]"
         preload="auto"
-        poster="/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg"
+        poster="/revax-assets/orbit-observatory.jpg"
         onLoadedMetadata={handleVideoProgress}
         onProgress={handleVideoProgress}
         onLoadedData={handleVideoReady}
@@ -528,7 +528,7 @@ export default function Home() {
         aria-hidden="true"
       >
         <source src={deviceProfile.source} type={deviceProfile.type} />
-        <source src={deviceProfile.constrained ? "/manus-storage/lumina-scroll-sequence-4k_d765b587.webm" : "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260429_114316_1c7889ad-2885-410e-b493-98119fee0ddb.mp4"} type={deviceProfile.constrained ? "video/webm" : "video/mp4"} />
+        <source src={deviceProfile.constrained ? "/revax-assets/revax-sequence-4k.webm" : "/revax-assets/revax-sequence.mp4"} type={deviceProfile.constrained ? "video/webm" : "video/mp4"} />
       </video>
       <div className={`satellite-loader ${isReady ? "satellite-loader--hidden" : ""}`} role="status" aria-live="polite">
         <div className="satellite-loader__backdrop" />
@@ -559,7 +559,7 @@ export default function Home() {
         <header className="flex items-center justify-between text-white">
           <a href="#top" className="group flex items-center gap-3 rounded-full p-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80" aria-label="Lumina home">
             <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-full border border-[#a8e8ff]/30 bg-black/20 text-white backdrop-blur-md transition-transform duration-200 ease-out group-hover:scale-105">
-              <img src="/manus-storage/lumina-mark_457b65a3.png" className="absolute inset-0 h-full w-full scale-125 object-contain opacity-20" alt="" />
+              <img src="/revax-assets/revax-mark.png" className="absolute inset-0 h-full w-full scale-125 object-contain opacity-20" alt="" />
               <RevaxMark />
             </span>
             <span className="text-sm font-medium tracking-[0.30em]">REVAX <span className="text-white/45">UNIVERSE</span></span>

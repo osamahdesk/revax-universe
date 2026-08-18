@@ -318,7 +318,7 @@
 
 /* Cinematic orbital loader: NASA-console precision with Lumina's cold liquid-glass palette. */
 .satellite-loader { isolation: isolate; font-family: "Orbitron", "Space Grotesk", "Helvetica Regular", Arial, sans-serif; background: rgba(2,6,13,.42); }
-.satellite-loader__backdrop { inset: 0; background: url('/manus-storage/lumina-orbit-observatory_b9fb2af9.jpg') center / cover no-repeat; filter: brightness(.46) saturate(.82) contrast(1.08); transform: scale(1.04); }
+.satellite-loader__backdrop { inset: 0; background: url('/revax-assets/orbit-observatory.jpg') center / cover no-repeat; filter: brightness(.46) saturate(.82) contrast(1.08); transform: scale(1.04); }
 .satellite-loader__backdrop::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,7,18,.35), rgba(2,8,18,.22) 48%, rgba(1,5,12,.86)), radial-gradient(ellipse at center, transparent 28%, rgba(0,2,8,.72) 100%); }
 .satellite-loader__scanlines { position: absolute; inset: 0; z-index: 1; opacity: .16; background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(168,232,255,.16) 6px, transparent 7px); mix-blend-mode: screen; animation: loader-scan 7s linear infinite; }
 .satellite-loader__grid { position: absolute; inset: 7vh 6vw; z-index: 1; opacity: .2; background-image: linear-gradient(rgba(168,232,255,.14) 1px, transparent 1px), linear-gradient(90deg, rgba(168,232,255,.14) 1px, transparent 1px); background-size: 72px 72px; mask-image: radial-gradient(ellipse at center, #000, transparent 72%); transform: perspective(800px) rotateX(54deg) translateY(28%); transform-origin: center bottom; }
