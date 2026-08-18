@@ -379,6 +379,17 @@ function AmbientAudio() {
   return <><div ref={mountRef} className="ambient-audio__player" aria-hidden="true" /><div className="ambient-audio liquid-glass" aria-label="Ambient music controls"><button type="button" className="ambient-audio__mute" onClick={toggleMute} aria-pressed={muted} aria-label={muted ? "Unmute ambient music" : "Mute ambient music"}>{muted ? <VolumeX size={14} /> : <Volume2 size={14} />}</button><span className="ambient-audio__pulse" /><label className="ambient-audio__volume"><span>VOL</span><input type="range" min="20" max="100" step="1" value={Math.max(20, volume)} onChange={(event) => changeVolume(Number(event.target.value))} aria-label={`Ambient music volume ${volume}%`} /><output>{volume}%</output></label>{needsGesture && <button type="button" className="ambient-audio__enable" onClick={enableAudio}>Enable</button>} {muteNotice && <span className="ambient-audio__notice" role="status">{muteNotice}</span>}</div></>;
 }
 
+function FutureSystems({ observatoryMode, onToggleObservatory }: { observatoryMode: boolean; onToggleObservatory: () => void }) {
+  const [progress, setProgress] = useState(0);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => { let frame = 0; const update = () => { const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); setProgress(Math.max(0, Math.min(1, window.scrollY / maxScroll))); frame = 0; }; const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); }; update(); window.addEventListener("scroll", onScroll, { passive: true }); return () => { if (frame) cancelAnimationFrame(frame); window.removeEventListener("scroll", onScroll); }; }, []);
+  const active = Math.min(observationScenes.length - 1, Math.floor(progress * observationScenes.length));
+  useEffect(() => { const messages = ["SIGNAL ACQUIRED", "ATMOSPHERIC PATH UPDATED", "DEEP FIELD IN FOCUS", "ECLIPSE THRESHOLD APPROACHING", "SIGNAL CONVERGENCE LOCKED"]; setNotice(messages[active]); const timer = window.setTimeout(() => setNotice(null), 1700); return () => window.clearTimeout(timer); }, [active]);
+  const jump = (index: number) => { const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight); window.scrollTo({ top: maxScroll * (index / observationScenes.length), behavior: observatoryMode ? "auto" : "smooth" }); };
+  const orbitAngle = progress * 360;
+  return <><div className="future-orbit" style={{ "--orbit-angle": `${orbitAngle}deg` } as React.CSSProperties} aria-hidden="true"><span className="future-orbit__ring future-orbit__ring--one" /><span className="future-orbit__ring future-orbit__ring--two" /><i className="future-orbit__node" /></div><nav className="future-timeline liquid-glass" aria-label="Cosmic timeline">{observationScenes.map((scene, index) => <button key={scene.index} type="button" className={active === index ? "is-active" : ""} onClick={() => jump(index)} aria-label={`Jump to ${scene.kicker}`}><span>{scene.index}</span><em>{scene.kicker.split(" / ")[0]}</em></button>)}</nav><aside className="coordinate-hud liquid-glass" aria-label="Live coordinates"><span>COORDINATE / REVAX</span><strong>{(12.4 + progress * 2.8).toFixed(2)}°N&nbsp;&nbsp;{(42.8 + progress * 18.6).toFixed(2)}°E</strong><small>VECTOR {String(active + 1).padStart(2, "0")} / 05 · ALT {Math.round(184 + progress * 640)} KM</small></aside><div className="future-system-notice" aria-live="polite">{notice && <span>{notice}</span>}</div><button type="button" className="observatory-toggle liquid-glass" onClick={onToggleObservatory} aria-pressed={observatoryMode}><span /> {observatoryMode ? "Observatory mode" : "Full signal"}</button></>;
+}
+
 function LuminaSvgMark({ className = "" }: { className?: string }) {
   return (
     <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -398,6 +409,7 @@ export default function Home() {
   const [networkNotice, setNetworkNotice] = useState<"weak" | "offline" | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [accessibilityMode, setAccessibilityMode] = useState(false);
+  const [observatoryMode, setObservatoryMode] = useState(false);
   const [selectedArchive, setSelectedArchive] = useState<(typeof observationScenes)[number] | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
@@ -483,7 +495,8 @@ export default function Home() {
   };
 
   return (
-    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""}`}>
+    <main className={`relative w-full min-h-[115vh] overflow-x-hidden flex flex-col items-center font-sans selection:bg-white/20 selection:text-white ${motionEnabled ? "" : "motion-paused"} ${accessibilityMode ? "accessibility-mode" : ""} ${observatoryMode ? "observatory-mode" : ""}`}>
+      <FutureSystems observatoryMode={observatoryMode} onToggleObservatory={() => setObservatoryMode((value) => !value)} />
       <ContextCursor />
       <ScrollCue />
       <SceneRail onSelect={jumpToScene} />

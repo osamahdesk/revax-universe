@@ -517,3 +517,31 @@
 @keyframes mute-notice-in { from { opacity: 0; transform: translateY(-5px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 700px) { .control-deck { top: 4.35rem; right: .75rem; width: calc(100vw - 1.5rem); } .control-deck__primary { gap: .4rem; } .control-deck__primary .telemetry-trigger, .control-deck__primary .motion-toggle { min-width: auto; padding-inline: .65rem; } .control-deck__status { font-size: .52rem; } .control-deck__secondary { min-height: 2.2rem; } }
 @media (prefers-reduced-motion: reduce) { .control-deck__status-dot { animation: none; } .control-deck__secondary .ambient-audio__notice { animation: none; } }
+
+/* REVAX future systems: restrained orbital UI, sparse telemetry, and mode-based focus. */
+.future-orbit { position: fixed; top: 7.5rem; right: 5.25rem; z-index: 8; width: 8rem; height: 8rem; pointer-events: none; opacity: .68; transform: rotate(var(--orbit-angle)); transition: opacity .35s ease; }
+.future-orbit__ring { position: absolute; inset: 0; border: 1px solid rgba(168,232,255,.18); border-radius: 50%; transform: rotate(36deg) scaleX(1.8); }
+.future-orbit__ring--two { inset: 1.3rem -.7rem; opacity: .48; transform: rotate(-54deg) scaleX(1.5); }
+.future-orbit__node { position: absolute; top: -.12rem; left: 50%; width: .38rem; height: .38rem; border-radius: 50%; background: #b9f4ff; box-shadow: 0 0 16px #8eeaff; transform: translateX(-50%); }
+.future-timeline { position: fixed; top: 4.5rem; left: 50%; z-index: 24; display: flex; align-items: center; gap: .25rem; padding: .36rem .5rem; transform: translateX(-50%); pointer-events: auto; }
+.future-timeline::before { content: ""; position: absolute; top: 50%; right: 1rem; left: 1rem; height: 1px; background: rgba(168,232,255,.18); }
+.future-timeline button { position: relative; z-index: 1; display: grid; gap: .14rem; min-width: 3rem; padding: .25rem .3rem; border: 0; background: transparent; color: rgba(235,250,255,.42); text-align: center; cursor: pointer; transition: color .2s ease, transform .2s ease; }
+.future-timeline button::before { content: ""; width: .3rem; height: .3rem; margin: 0 auto .12rem; border: 1px solid rgba(168,232,255,.5); border-radius: 50%; background: #071321; }
+.future-timeline button.is-active { color: #dff8ff; transform: translateY(-2px); }
+.future-timeline button.is-active::before { background: #a8e8ff; box-shadow: 0 0 12px #a8e8ff; }
+.future-timeline span { font: 600 .52rem/1 Orbitron, sans-serif; letter-spacing: .12em; }
+.future-timeline em { overflow: hidden; max-width: 4.2rem; font: normal .42rem/1 Tajawal, sans-serif; letter-spacing: .08em; text-overflow: ellipsis; white-space: nowrap; }
+.coordinate-hud { position: fixed; bottom: 1.35rem; left: 1.25rem; z-index: 24; display: grid; gap: .32rem; min-width: 12rem; padding: .7rem .85rem; color: rgba(220,247,255,.62); }
+.coordinate-hud span, .coordinate-hud small { font: 600 .48rem/1.2 Orbitron, sans-serif; letter-spacing: .14em; }
+.coordinate-hud strong { color: #dff8ff; font: 400 .72rem/1.2 Orbitron, sans-serif; letter-spacing: .1em; }
+.coordinate-hud small { color: rgba(220,247,255,.38); font-size: .42rem; }
+.future-system-notice { position: fixed; top: 7.2rem; left: 50%; z-index: 30; min-height: 1.2rem; transform: translateX(-50%); pointer-events: none; }
+.future-system-notice span { display: block; padding: .42rem .7rem; border-left: 1px solid #a8e8ff; background: rgba(4,12,24,.62); color: rgba(220,247,255,.78); font: 600 .48rem/1 Orbitron, sans-serif; letter-spacing: .18em; animation: future-notice-in 260ms cubic-bezier(.23,1,.32,1) both; }
+.observatory-toggle { position: fixed; bottom: 1.35rem; right: 1.25rem; z-index: 24; display: inline-flex; align-items: center; gap: .45rem; padding: .55rem .7rem; color: rgba(220,247,255,.58); font: 600 .48rem/1 Orbitron, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.observatory-toggle span { width: .35rem; height: .35rem; border: 1px solid #a8e8ff; border-radius: 50%; }
+.observatory-toggle[aria-pressed="true"] { color: #dff8ff; border-color: rgba(168,232,255,.65); background: rgba(168,232,255,.12); }
+.observatory-mode .coordinate-hud, .observatory-mode .future-timeline, .observatory-mode .future-system-notice { opacity: .55; }
+.observatory-mode .reveal-panel { filter: saturate(.72) contrast(1.05); }
+@keyframes future-notice-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 700px) { .future-orbit { top: 9rem; right: .4rem; width: 5rem; height: 5rem; opacity: .42; } .future-timeline { top: 8.8rem; width: calc(100vw - 1.5rem); justify-content: space-between; } .future-timeline button { min-width: 2.2rem; } .future-timeline em { display: none; } .coordinate-hud { bottom: 4.25rem; left: .75rem; min-width: 10rem; } .observatory-toggle { right: .75rem; bottom: 1rem; } .future-system-notice { top: 11.2rem; } }
+@media (prefers-reduced-motion: reduce) { .future-orbit { transform: none; } .future-system-notice span { animation: none; } }
