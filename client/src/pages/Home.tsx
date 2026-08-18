@@ -3,9 +3,11 @@ import { motion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUpRight,
+  Check,
+  Copy,
+  Share2,
   Facebook,
   Instagram,
-  Music2,
   Play,
   Twitter,
   Youtube,
@@ -301,7 +303,13 @@ function SceneRail({ onSelect }: { onSelect: (index: number) => void }) {
 }
 
 function ArchiveModal({ scene, onClose, onJump }: { scene: (typeof observationScenes)[number]; onClose: () => void; onJump: () => void }) {
-  return <div className="archive-modal__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="archive-modal liquid-glass" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title"><div className="archive-modal__image" style={{ backgroundImage: `url(${scene.image})` }} /><div className="archive-modal__wash" /><div className="archive-modal__top"><span>REVAX / SIGNAL ARCHIVE</span><button type="button" onClick={onClose} aria-label="Close signal details">×</button></div><div className="archive-modal__body"><span className="archive-modal__index">{scene.index} / 05</span><p className="archive-modal__kicker">{scene.kicker}</p><h2 id="archive-modal-title">{scene.title}</h2><p className="archive-modal__description">{scene.body}</p><div className="archive-modal__telemetry"><span><small>FREQUENCY</small><strong>{scene.note}</strong></span><span><small>FIELD STATE</small><strong>OBSERVING</strong></span><span><small>FRAME</small><strong>01.00</strong></span></div><div className="archive-modal__visual"><span className="archive-modal__orbit" /><span className="archive-modal__crosshair" /><span className="archive-modal__signal-bars"><i /><i /><i /><i /><i /><i /></span></div><button type="button" className="archive-modal__action" data-cursor="open" onClick={() => { onJump(); onClose(); }}>Open in sequence <ArrowUpRight size={15} /></button></div><div className="archive-modal__footer"><span>© REVAX UNIVERSE</span><span>ESC TO CLOSE</span></div></section></div>;
+  const [copied, setCopied] = useState(false);
+  const shareUrl = `${window.location.origin}${window.location.pathname}#signal-${scene.index}`;
+  const shareText = `${scene.title} — REVAX UNIVERSE`;
+  const copyLink = async () => { try { await navigator.clipboard.writeText(shareUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } };
+  const shareNative = async () => { if (navigator.share) { await navigator.share({ title: shareText, text: scene.body, url: shareUrl }); } else await copyLink(); };
+  const shareSocial = (platform: "x" | "facebook" | "whatsapp") => { const urls = { x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, whatsapp: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}` }; window.open(urls[platform], "revax-share", "width=640,height=520,noopener,noreferrer"); };
+  return <div className="archive-modal__backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="archive-modal liquid-glass" role="dialog" aria-modal="true" aria-labelledby="archive-modal-title"><div className="archive-modal__image" style={{ backgroundImage: `url(${scene.image})` }} /><div className="archive-modal__wash" /><div className="archive-modal__top"><span>REVAX / SIGNAL ARCHIVE</span><button type="button" onClick={onClose} aria-label="Close signal details">×</button></div><div className="archive-modal__body"><span className="archive-modal__index">{scene.index} / 05</span><p className="archive-modal__kicker">{scene.kicker}</p><h2 id="archive-modal-title">{scene.title}</h2><p className="archive-modal__description">{scene.body}</p><div className="archive-modal__telemetry"><span><small>FREQUENCY</small><strong>{scene.note}</strong></span><span><small>FIELD STATE</small><strong>OBSERVING</strong></span><span><small>FRAME</small><strong>01.00</strong></span></div><div className="archive-modal__visual"><span className="archive-modal__orbit" /><span className="archive-modal__crosshair" /><span className="archive-modal__signal-bars"><i /><i /><i /><i /><i /><i /></span></div><div className="archive-modal__actions"><button type="button" className="archive-modal__action" data-cursor="open" onClick={() => { onJump(); onClose(); }}>Open in sequence <ArrowUpRight size={15} /></button><div className="archive-modal__share"><span>SHARE SIGNAL</span><button type="button" onClick={shareNative} aria-label="Share signal"><Share2 size={14} /></button><button type="button" onClick={() => shareSocial("x")} aria-label="Share on X">X</button><button type="button" onClick={() => shareSocial("facebook")} aria-label="Share on Facebook">f</button><button type="button" onClick={() => shareSocial("whatsapp")} aria-label="Share on WhatsApp">W</button><button type="button" onClick={copyLink} aria-label="Copy signal link">{copied ? <Check size={14} /> : <Copy size={14} />}</button></div></div></div><div className="archive-modal__footer"><span>© REVAX UNIVERSE</span><span>ESC TO CLOSE</span></div></section></div>;
 }
 
 function CommandCenter({ open, onClose, onJump }: { open: boolean; onClose: () => void; onJump: (index: number) => void }) {
@@ -332,10 +340,7 @@ export default function Home() {
   const [networkNotice, setNetworkNotice] = useState<"weak" | "offline" | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [accessibilityMode, setAccessibilityMode] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(false);
   const [selectedArchive, setSelectedArchive] = useState<(typeof observationScenes)[number] | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const previousSceneRef = useRef(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoState, setVideoState] = useState<"loading" | "ready" | "error">("loading");
   const [loadProgress, setLoadProgress] = useState(0);
@@ -348,32 +353,10 @@ export default function Home() {
   const isReady = videoState === "ready";
   const loaderPercent = Math.max(8, loadProgress);
   const loaderStage = videoState === "error" ? "SIGNAL RETRY" : loaderPercent < 34 ? "CALIBRATING LENS" : loaderPercent < 78 ? "LOCKING SATELLITE" : "SIGNAL READY";
-  const playSynth = (kind: "open" | "whoosh") => {
-    if (!soundEnabled) return;
-    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const audio = audioContextRef.current ?? new AudioContextClass();
-    audioContextRef.current = audio;
-    if (audio.state === "suspended") void audio.resume();
-    const oscillator = audio.createOscillator();
-    const gain = audio.createGain();
-    const now = audio.currentTime;
-    oscillator.type = kind === "open" ? "sine" : "triangle";
-    oscillator.frequency.setValueAtTime(kind === "open" ? 280 : 120, now);
-    oscillator.frequency.exponentialRampToValueAtTime(kind === "open" ? 760 : 52, now + (kind === "open" ? .22 : .34));
-    gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(kind === "open" ? .045 : .028, now + .025);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + (kind === "open" ? .25 : .38));
-    oscillator.connect(gain).connect(audio.destination);
-    oscillator.start(now);
-    oscillator.stop(now + (kind === "open" ? .26 : .4));
-  };
-  const toggleSound = () => { setSoundEnabled((value) => { const next = !value; if (next) { const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext; if (AudioContextClass && !audioContextRef.current) audioContextRef.current = new AudioContextClass(); } return next; }); };
-  const openCommandCenter = () => { setCommandOpen(true); window.setTimeout(() => playSynth("open"), 0); };
+  const openCommandCenter = () => setCommandOpen(true);
   const jumpToScene = (index: number) => {
     const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
     window.scrollTo({ top: maxScroll * (index / observationScenes.length), behavior: motionEnabled ? "smooth" : "auto" });
-    playSynth("whoosh");
   };
 
   useEffect(() => {
@@ -396,15 +379,6 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [videoState, deviceProfile]);
 
-  useEffect(() => {
-    const onScrollSound = () => {
-      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
-      const scene = Math.min(observationScenes.length - 1, Math.floor((window.scrollY / maxScroll) * observationScenes.length));
-      if (scene !== previousSceneRef.current) { previousSceneRef.current = scene; playSynth("whoosh"); }
-    };
-    window.addEventListener("scroll", onScrollSound, { passive: true });
-    return () => window.removeEventListener("scroll", onScrollSound);
-  }, [soundEnabled]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -456,7 +430,6 @@ export default function Home() {
       <ScrollCue />
       <SceneRail onSelect={jumpToScene} />
       <button type="button" data-cursor="open" className="command-trigger liquid-glass" onClick={openCommandCenter} aria-label="Open Command Center"><span>⌘ /</span> Explore</button>
-      <button type="button" data-cursor="open" className="sound-toggle liquid-glass" onClick={toggleSound} aria-pressed={soundEnabled}><span className="sound-toggle__pulse" /> {soundEnabled ? "Sound on" : "Sound off"}</button>
       <CommandCenter open={commandOpen} onClose={() => setCommandOpen(false)} onJump={jumpToScene} />
       {selectedArchive && <ArchiveModal scene={selectedArchive} onClose={() => setSelectedArchive(null)} onJump={() => jumpToScene(observationScenes.findIndex((item) => item.index === selectedArchive.index))} />}
       <button type="button" data-cursor="open" className="motion-toggle liquid-glass" onClick={() => setMotionEnabled((value) => !value)} aria-pressed={motionEnabled}><span className="motion-toggle__dot" /> {motionEnabled ? "Motion on" : "Motion off"}</button><button type="button" data-cursor="open" className="accessibility-toggle liquid-glass" onClick={() => setAccessibilityMode((value) => !value)} aria-pressed={accessibilityMode}>A11y {accessibilityMode ? "on" : "off"}</button>
